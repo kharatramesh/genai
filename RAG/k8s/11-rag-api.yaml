@@ -1,0 +1,119 @@
+# RAG API. The code (rag-app) and sample documents (rag-sample-docs) come from ConfigMaps
+# created by deploy-rag.sh, so no custom image build or registry is needed.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rag-docs
+  namespace: trainer
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-api
+  namespace: trainer
+  labels:
+    app: rag-api
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate               # the RWO docs volume cannot be attached to two pods
+  selector:
+    matchLabels:
+      app: rag-api
+  template:
+    metadata:
+      labels:
+        app: rag-api
+    spec:
+      containers:
+        - name: api
+          image: python:3.12-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - pip install --no-cache-dir -r /app/requirements.txt &&
+              exec uvicorn --app-dir /app main:app --host 0.0.0.0 --port 8000
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: OLLAMA_URL
+              value: http://ollama.trainer.svc.cluster.local:11434
+            - name: QDRANT_URL
+              value: http://qdrant.trainer.svc.cluster.local:6333
+            - name: EMBED_MODEL
+              value: nomic-embed-text
+            - name: CHAT_MODEL
+              value: llama3.2:3b
+            - name: ROOT_PATH            # the ingress serves this app under /rag
+              value: /rag
+          startupProbe:                  # pip install takes a minute or two
+            httpGet:
+              path: /status
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: http
+            periodSeconds: 15
+          volumeMounts:
+            - name: app
+              mountPath: /app
+            - name: sample-docs
+              mountPath: /sample-docs
+            - name: docs
+              mountPath: /docs
+      volumes:
+        - name: app
+          configMap:
+            name: rag-app
+        - name: sample-docs
+          configMap:
+            name: rag-sample-docs
+        - name: docs
+          persistentVolumeClaim:
+            claimName: rag-docs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-api
+  namespace: trainer
+spec:
+  selector:
+    app: rag-api
+  ports:
+    - port: 80
+      targetPort: http
+---
+# Served on the existing host under /rag (the web UI keeps "/").
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rag-api
+  namespace: trainer
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: llm-trainer.priartw.com
+      http:
+        paths:
+          - pathType: ImplementationSpecific
+            path: /rag(/|$)(.*)
+            backend:
+              service:
+                name: rag-api
+                port:
+                  number: 80
