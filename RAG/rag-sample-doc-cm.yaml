@@ -1,0 +1,44 @@
+apiVersion: v1
+binaryData:
+data:
+  company-handbook.md: |
+    # Cloud4Green Training Lab - Employee Handbook
+
+    ## Remote work
+    Employees may work remotely up to 3 days per week. Fridays are on-site days for the
+    whole team unless the team lead approves an exception in writing.
+
+    ## Support hours
+    The internal IT helpdesk is available from 08:00 to 18:00 IST, Monday to Friday.
+    Urgent issues outside these hours go to the on-call engineer through the #oncall channel.
+
+    ## Equipment
+    Laptops are refreshed every 36 months. Employees who need a second monitor can order
+    one through the IT portal; the approval limit for a team lead is 250 USD per request.
+    Anything above 250 USD needs approval from the department head.
+
+    ## Leave
+    Every employee gets 24 days of paid annual leave and 10 days of sick leave per year.
+    Unused annual leave up to 5 days can be carried over to the next year.
+  gpu-lab-faq.md: |
+    # GPU Lab FAQ
+
+    ## Which GPU does the lab use?
+    The lab runs on g5.xlarge nodes, each with one NVIDIA A10G GPU (24 GB).
+    Four student pods can share a single GPU through time-slicing.
+
+    ## Where do I deploy my work?
+    Every student gets a dedicated namespace named stu-<initials>, for example stu-jd for
+    Jane Doe. Each namespace has a quota of 1 GPU request and 8 GiB of memory.
+
+    ## When is the lab reset?
+    The lab is reset every Friday at 22:00 UTC. All namespaces whose names start with stu-
+    are wiped, so export anything you want to keep before then.
+
+    ## Who do I contact for help?
+    Post in the #gpu-lab channel. The trainer answers within one working day.
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: rag-sample-doc
+  namespace: trainer
