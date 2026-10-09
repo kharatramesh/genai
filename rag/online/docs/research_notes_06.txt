@@ -1,0 +1,160 @@
+Lab Research Notebook 6
+=======================
+
+Research Log 1
+--------------
+
+Experiment H19 led by Sara Haddad tested a transformer model on a dataset of 244000 samples collected in Hamburg. Accuracy reached 80.2% with a learning rate of 1e-3 and batch size 64. Training took 58 hours on 1 GPUs. The result was recorded on 9 April 2022 and contradicts the earlier hypothesis in 30% of held-out cases.
+
+Experiment B45 led by Tomas Novak tested a transformer model on a dataset of 738000 samples collected in Lisbon. Accuracy reached 63.6% with a learning rate of 5e-5 and batch size 128. Training took 22 hours on 14 GPUs. The result was recorded on 16 July 2024 and contradicts the earlier hypothesis in 25% of held-out cases.
+
+Experiment G13 led by Ingrid Solberg tested a retrieval-augmented model on a dataset of 667000 samples collected in Tallinn. Accuracy reached 70.7% with a learning rate of 1e-3 and batch size 16. Training took 38 hours on 1 GPUs. The result was recorded on 11 May 2020 and contradicts the earlier hypothesis in 10% of held-out cases.
+
+Experiment F22 led by Diego Alvarez tested a gradient boosted model on a dataset of 750000 samples collected in Osaka. Accuracy reached 95.1% with a learning rate of 1e-4 and batch size 256. Training took 79 hours on 16 GPUs. The result was recorded on 23 January 2025 and contradicts the earlier hypothesis in 28% of held-out cases.
+
+Experiment C78 led by Diego Alvarez tested a gradient boosted model on a dataset of 55000 samples collected in Osaka. Accuracy reached 81.3% with a learning rate of 3e-4 and batch size 128. Training took 90 hours on 9 GPUs. The result was recorded on 22 May 2023 and contradicts the earlier hypothesis in 15% of held-out cases.
+
+Research Log 2
+--------------
+
+Experiment A51 led by Yuki Mori tested a retrieval-augmented model on a dataset of 861000 samples collected in Perth. Accuracy reached 69.0% with a learning rate of 1e-4 and batch size 16. Training took 55 hours on 3 GPUs. The result was recorded on 10 November 2026 and contradicts the earlier hypothesis in 14% of held-out cases.
+
+Experiment B4 led by Lena Fischer tested a gradient boosted model on a dataset of 654000 samples collected in Nairobi. Accuracy reached 65.7% with a learning rate of 1e-3 and batch size 64. Training took 51 hours on 16 GPUs. The result was recorded on 16 November 2023 and contradicts the earlier hypothesis in 10% of held-out cases.
+
+Experiment G24 led by Sara Haddad tested a graph model on a dataset of 379000 samples collected in Denver. Accuracy reached 88.0% with a learning rate of 1e-4 and batch size 128. Training took 60 hours on 9 GPUs. The result was recorded on 8 May 2019 and contradicts the earlier hypothesis in 12% of held-out cases.
+
+Experiment B11 led by Hannah Cole tested a convolutional model on a dataset of 828000 samples collected in Bergen. Accuracy reached 86.9% with a learning rate of 3e-4 and batch size 256. Training took 8 hours on 13 GPUs. The result was recorded on 27 September 2025 and contradicts the earlier hypothesis in 25% of held-out cases.
+
+Experiment H74 led by Lena Fischer tested a graph model on a dataset of 307000 samples collected in Osaka. Accuracy reached 85.0% with a learning rate of 3e-4 and batch size 16. Training took 58 hours on 6 GPUs. The result was recorded on 6 April 2022 and contradicts the earlier hypothesis in 12% of held-out cases.
+
+Research Log 3
+--------------
+
+Experiment G11 led by Hannah Cole tested a graph model on a dataset of 207000 samples collected in Denver. Accuracy reached 98.4% with a learning rate of 1e-4 and batch size 16. Training took 12 hours on 13 GPUs. The result was recorded on 18 July 2024 and contradicts the earlier hypothesis in 16% of held-out cases.
+
+Experiment H2 led by Rafael Costa tested a retrieval-augmented model on a dataset of 602000 samples collected in Bergen. Accuracy reached 86.1% with a learning rate of 5e-5 and batch size 32. Training took 19 hours on 4 GPUs. The result was recorded on 4 October 2020 and contradicts the earlier hypothesis in 17% of held-out cases.
+
+Experiment F53 led by Tomas Novak tested a graph model on a dataset of 671000 samples collected in Perth. Accuracy reached 96.9% with a learning rate of 5e-5 and batch size 16. Training took 23 hours on 9 GPUs. The result was recorded on 13 March 2025 and contradicts the earlier hypothesis in 9% of held-out cases.
+
+Experiment G43 led by Rafael Costa tested a gradient boosted model on a dataset of 51000 samples collected in Perth. Accuracy reached 77.5% with a learning rate of 1e-3 and batch size 64. Training took 39 hours on 10 GPUs. The result was recorded on 9 August 2020 and contradicts the earlier hypothesis in 15% of held-out cases.
+
+Experiment C39 led by Rafael Costa tested a graph model on a dataset of 793000 samples collected in Hamburg. Accuracy reached 77.6% with a learning rate of 1e-3 and batch size 32. Training took 57 hours on 7 GPUs. The result was recorded on 27 July 2026 and contradicts the earlier hypothesis in 24% of held-out cases.
+
+Research Log 4
+--------------
+
+Experiment A66 led by Priya Nair tested a transformer model on a dataset of 319000 samples collected in Bergen. Accuracy reached 85.2% with a learning rate of 1e-3 and batch size 32. Training took 25 hours on 7 GPUs. The result was recorded on 27 January 2022 and contradicts the earlier hypothesis in 9% of held-out cases.
+
+Experiment H7 led by Sara Haddad tested a gradient boosted model on a dataset of 281000 samples collected in Hamburg. Accuracy reached 89.8% with a learning rate of 5e-5 and batch size 16. Training took 88 hours on 1 GPUs. The result was recorded on 8 June 2026 and contradicts the earlier hypothesis in 27% of held-out cases.
+
+Experiment H23 led by Ingrid Solberg tested a retrieval-augmented model on a dataset of 565000 samples collected in Hamburg. Accuracy reached 82.2% with a learning rate of 1e-4 and batch size 16. Training took 37 hours on 1 GPUs. The result was recorded on 13 January 2021 and contradicts the earlier hypothesis in 26% of held-out cases.
+
+Experiment D29 led by Hannah Cole tested a gradient boosted model on a dataset of 694000 samples collected in Tallinn. Accuracy reached 77.6% with a learning rate of 1e-3 and batch size 16. Training took 61 hours on 5 GPUs. The result was recorded on 21 March 2019 and contradicts the earlier hypothesis in 15% of held-out cases.
+
+Experiment E78 led by Tomas Novak tested a convolutional model on a dataset of 434000 samples collected in Quito. Accuracy reached 82.7% with a learning rate of 1e-4 and batch size 32. Training took 60 hours on 10 GPUs. The result was recorded on 22 September 2025 and contradicts the earlier hypothesis in 26% of held-out cases.
+
+Experiment B1 led by Kofi Mensah tested a convolutional model on a dataset of 575000 samples collected in Pune. Accuracy reached 98.4% with a learning rate of 1e-4 and batch size 16. Training took 62 hours on 3 GPUs. The result was recorded on 11 May 2024 and contradicts the earlier hypothesis in 16% of held-out cases.
+
+Experiment E84 led by Rafael Costa tested a convolutional model on a dataset of 193000 samples collected in Denver. Accuracy reached 93.3% with a learning rate of 1e-3 and batch size 256. Training took 52 hours on 11 GPUs. The result was recorded on 22 March 2019 and contradicts the earlier hypothesis in 28% of held-out cases.
+
+Research Log 5
+--------------
+
+Experiment E34 led by Diego Alvarez tested a graph model on a dataset of 398000 samples collected in Lisbon. Accuracy reached 97.9% with a learning rate of 3e-4 and batch size 64. Training took 93 hours on 8 GPUs. The result was recorded on 22 September 2026 and contradicts the earlier hypothesis in 29% of held-out cases.
+
+Experiment F65 led by Tomas Novak tested a gradient boosted model on a dataset of 861000 samples collected in Bergen. Accuracy reached 71.4% with a learning rate of 1e-3 and batch size 128. Training took 17 hours on 9 GPUs. The result was recorded on 24 September 2021 and contradicts the earlier hypothesis in 29% of held-out cases.
+
+Experiment F84 led by Marcus Webb tested a gradient boosted model on a dataset of 364000 samples collected in Tallinn. Accuracy reached 79.6% with a learning rate of 1e-4 and batch size 64. Training took 34 hours on 10 GPUs. The result was recorded on 15 February 2026 and contradicts the earlier hypothesis in 9% of held-out cases.
+
+Experiment B61 led by Lena Fischer tested a retrieval-augmented model on a dataset of 123000 samples collected in Quito. Accuracy reached 93.4% with a learning rate of 5e-5 and batch size 16. Training took 20 hours on 5 GPUs. The result was recorded on 7 June 2025 and contradicts the earlier hypothesis in 26% of held-out cases.
+
+Experiment H19 led by Sara Haddad tested a gradient boosted model on a dataset of 798000 samples collected in Osaka. Accuracy reached 91.5% with a learning rate of 3e-4 and batch size 64. Training took 82 hours on 2 GPUs. The result was recorded on 1 August 2023 and contradicts the earlier hypothesis in 14% of held-out cases.
+
+Experiment C74 led by Priya Nair tested a graph model on a dataset of 805000 samples collected in Osaka. Accuracy reached 68.9% with a learning rate of 5e-5 and batch size 128. Training took 52 hours on 14 GPUs. The result was recorded on 16 July 2019 and contradicts the earlier hypothesis in 9% of held-out cases.
+
+Experiment D94 led by Sara Haddad tested a transformer model on a dataset of 330000 samples collected in Bergen. Accuracy reached 72.0% with a learning rate of 1e-3 and batch size 32. Training took 29 hours on 12 GPUs. The result was recorded on 10 March 2020 and contradicts the earlier hypothesis in 20% of held-out cases.
+
+Experiment E22 led by Marcus Webb tested a transformer model on a dataset of 306000 samples collected in Nairobi. Accuracy reached 89.8% with a learning rate of 1e-4 and batch size 128. Training took 88 hours on 5 GPUs. The result was recorded on 11 August 2024 and contradicts the earlier hypothesis in 14% of held-out cases.
+
+Research Log 6
+--------------
+
+Experiment G3 led by Lena Fischer tested a gradient boosted model on a dataset of 745000 samples collected in Denver. Accuracy reached 73.0% with a learning rate of 3e-4 and batch size 16. Training took 47 hours on 2 GPUs. The result was recorded on 13 November 2023 and contradicts the earlier hypothesis in 25% of held-out cases.
+
+Experiment A77 led by Aiko Tanaka tested a transformer model on a dataset of 670000 samples collected in Lisbon. Accuracy reached 63.1% with a learning rate of 5e-5 and batch size 128. Training took 49 hours on 4 GPUs. The result was recorded on 18 May 2026 and contradicts the earlier hypothesis in 30% of held-out cases.
+
+Experiment C27 led by Rafael Costa tested a transformer model on a dataset of 309000 samples collected in Quito. Accuracy reached 66.8% with a learning rate of 1e-4 and batch size 256. Training took 78 hours on 5 GPUs. The result was recorded on 14 February 2020 and contradicts the earlier hypothesis in 17% of held-out cases.
+
+Experiment B14 led by Ingrid Solberg tested a gradient boosted model on a dataset of 624000 samples collected in Tallinn. Accuracy reached 76.8% with a learning rate of 3e-4 and batch size 64. Training took 91 hours on 14 GPUs. The result was recorded on 10 March 2019 and contradicts the earlier hypothesis in 25% of held-out cases.
+
+Experiment H27 led by Rafael Costa tested a graph model on a dataset of 339000 samples collected in Tallinn. Accuracy reached 60.0% with a learning rate of 1e-3 and batch size 16. Training took 74 hours on 16 GPUs. The result was recorded on 5 February 2020 and contradicts the earlier hypothesis in 11% of held-out cases.
+
+Experiment E83 led by Lena Fischer tested a graph model on a dataset of 304000 samples collected in Nairobi. Accuracy reached 89.0% with a learning rate of 1e-3 and batch size 32. Training took 6 hours on 10 GPUs. The result was recorded on 12 November 2024 and contradicts the earlier hypothesis in 21% of held-out cases.
+
+Research Log 7
+--------------
+
+Experiment B98 led by Aiko Tanaka tested a transformer model on a dataset of 873000 samples collected in Denver. Accuracy reached 70.5% with a learning rate of 1e-4 and batch size 128. Training took 80 hours on 9 GPUs. The result was recorded on 24 February 2024 and contradicts the earlier hypothesis in 18% of held-out cases.
+
+Experiment C15 led by Diego Alvarez tested a graph model on a dataset of 468000 samples collected in Nairobi. Accuracy reached 84.7% with a learning rate of 5e-5 and batch size 32. Training took 15 hours on 5 GPUs. The result was recorded on 23 December 2019 and contradicts the earlier hypothesis in 13% of held-out cases.
+
+Experiment B54 led by Yuki Mori tested a graph model on a dataset of 822000 samples collected in Pune. Accuracy reached 88.2% with a learning rate of 5e-5 and batch size 64. Training took 79 hours on 1 GPUs. The result was recorded on 28 November 2021 and contradicts the earlier hypothesis in 23% of held-out cases.
+
+Experiment H15 led by Diego Alvarez tested a graph model on a dataset of 48000 samples collected in Osaka. Accuracy reached 76.5% with a learning rate of 1e-3 and batch size 256. Training took 96 hours on 8 GPUs. The result was recorded on 22 June 2020 and contradicts the earlier hypothesis in 21% of held-out cases.
+
+Experiment D62 led by Sara Haddad tested a graph model on a dataset of 153000 samples collected in Bergen. Accuracy reached 99.0% with a learning rate of 1e-3 and batch size 32. Training took 65 hours on 16 GPUs. The result was recorded on 28 August 2021 and contradicts the earlier hypothesis in 10% of held-out cases.
+
+Research Log 8
+--------------
+
+Experiment F31 led by Sara Haddad tested a convolutional model on a dataset of 52000 samples collected in Bergen. Accuracy reached 74.8% with a learning rate of 5e-5 and batch size 128. Training took 31 hours on 3 GPUs. The result was recorded on 15 August 2026 and contradicts the earlier hypothesis in 10% of held-out cases.
+
+Experiment H58 led by Sara Haddad tested a transformer model on a dataset of 510000 samples collected in Lisbon. Accuracy reached 66.6% with a learning rate of 5e-5 and batch size 16. Training took 72 hours on 1 GPUs. The result was recorded on 27 February 2023 and contradicts the earlier hypothesis in 24% of held-out cases.
+
+Experiment D84 led by Hannah Cole tested a graph model on a dataset of 350000 samples collected in Hamburg. Accuracy reached 63.3% with a learning rate of 5e-5 and batch size 64. Training took 72 hours on 16 GPUs. The result was recorded on 23 November 2024 and contradicts the earlier hypothesis in 30% of held-out cases.
+
+Experiment H15 led by Marcus Webb tested a gradient boosted model on a dataset of 3000 samples collected in Hamburg. Accuracy reached 82.4% with a learning rate of 1e-4 and batch size 16. Training took 6 hours on 6 GPUs. The result was recorded on 16 March 2025 and contradicts the earlier hypothesis in 11% of held-out cases.
+
+Experiment E79 led by Lena Fischer tested a gradient boosted model on a dataset of 124000 samples collected in Quito. Accuracy reached 73.7% with a learning rate of 3e-4 and batch size 64. Training took 14 hours on 14 GPUs. The result was recorded on 2 November 2020 and contradicts the earlier hypothesis in 22% of held-out cases.
+
+Experiment H85 led by Yuki Mori tested a retrieval-augmented model on a dataset of 138000 samples collected in Perth. Accuracy reached 60.8% with a learning rate of 1e-3 and batch size 256. Training took 56 hours on 16 GPUs. The result was recorded on 17 March 2021 and contradicts the earlier hypothesis in 12% of held-out cases.
+
+Experiment B50 led by Hannah Cole tested a retrieval-augmented model on a dataset of 621000 samples collected in Hamburg. Accuracy reached 92.6% with a learning rate of 5e-5 and batch size 256. Training took 89 hours on 8 GPUs. The result was recorded on 9 July 2024 and contradicts the earlier hypothesis in 17% of held-out cases.
+
+Experiment H18 led by Priya Nair tested a graph model on a dataset of 617000 samples collected in Bergen. Accuracy reached 79.8% with a learning rate of 1e-4 and batch size 256. Training took 81 hours on 7 GPUs. The result was recorded on 7 April 2023 and contradicts the earlier hypothesis in 29% of held-out cases.
+
+Research Log 9
+--------------
+
+Experiment C91 led by Hannah Cole tested a gradient boosted model on a dataset of 516000 samples collected in Bergen. Accuracy reached 80.1% with a learning rate of 1e-4 and batch size 256. Training took 62 hours on 14 GPUs. The result was recorded on 22 December 2023 and contradicts the earlier hypothesis in 21% of held-out cases.
+
+Experiment A67 led by Marcus Webb tested a transformer model on a dataset of 391000 samples collected in Denver. Accuracy reached 63.0% with a learning rate of 3e-4 and batch size 64. Training took 21 hours on 10 GPUs. The result was recorded on 22 May 2021 and contradicts the earlier hypothesis in 9% of held-out cases.
+
+Experiment E27 led by Kofi Mensah tested a transformer model on a dataset of 368000 samples collected in Perth. Accuracy reached 66.9% with a learning rate of 3e-4 and batch size 256. Training took 50 hours on 8 GPUs. The result was recorded on 17 December 2023 and contradicts the earlier hypothesis in 30% of held-out cases.
+
+Experiment A49 led by Diego Alvarez tested a graph model on a dataset of 808000 samples collected in Hamburg. Accuracy reached 95.0% with a learning rate of 1e-3 and batch size 64. Training took 26 hours on 15 GPUs. The result was recorded on 27 April 2024 and contradicts the earlier hypothesis in 26% of held-out cases.
+
+Experiment D93 led by Lena Fischer tested a convolutional model on a dataset of 460000 samples collected in Denver. Accuracy reached 64.2% with a learning rate of 3e-4 and batch size 256. Training took 16 hours on 13 GPUs. The result was recorded on 2 July 2023 and contradicts the earlier hypothesis in 25% of held-out cases.
+
+Experiment E17 led by Priya Nair tested a retrieval-augmented model on a dataset of 867000 samples collected in Nairobi. Accuracy reached 60.5% with a learning rate of 5e-5 and batch size 32. Training took 6 hours on 5 GPUs. The result was recorded on 11 October 2019 and contradicts the earlier hypothesis in 28% of held-out cases.
+
+Experiment E63 led by Yuki Mori tested a retrieval-augmented model on a dataset of 367000 samples collected in Osaka. Accuracy reached 80.8% with a learning rate of 3e-4 and batch size 32. Training took 67 hours on 3 GPUs. The result was recorded on 26 September 2021 and contradicts the earlier hypothesis in 21% of held-out cases.
+
+Research Log 10
+---------------
+
+Experiment B45 led by Lena Fischer tested a gradient boosted model on a dataset of 680000 samples collected in Hamburg. Accuracy reached 81.5% with a learning rate of 1e-4 and batch size 32. Training took 80 hours on 16 GPUs. The result was recorded on 18 November 2019 and contradicts the earlier hypothesis in 11% of held-out cases.
+
+Experiment F58 led by Lena Fischer tested a retrieval-augmented model on a dataset of 637000 samples collected in Tallinn. Accuracy reached 62.5% with a learning rate of 5e-5 and batch size 16. Training took 50 hours on 9 GPUs. The result was recorded on 18 December 2023 and contradicts the earlier hypothesis in 8% of held-out cases.
+
+Experiment F66 led by Kofi Mensah tested a graph model on a dataset of 499000 samples collected in Lisbon. Accuracy reached 78.3% with a learning rate of 1e-4 and batch size 256. Training took 11 hours on 4 GPUs. The result was recorded on 6 September 2019 and contradicts the earlier hypothesis in 28% of held-out cases.
+
+Experiment B27 led by Hannah Cole tested a gradient boosted model on a dataset of 886000 samples collected in Quito. Accuracy reached 66.3% with a learning rate of 5e-5 and batch size 16. Training took 96 hours on 5 GPUs. The result was recorded on 1 August 2024 and contradicts the earlier hypothesis in 9% of held-out cases.
+
+Experiment B10 led by Aiko Tanaka tested a gradient boosted model on a dataset of 814000 samples collected in Nairobi. Accuracy reached 95.1% with a learning rate of 3e-4 and batch size 64. Training took 53 hours on 13 GPUs. The result was recorded on 15 November 2025 and contradicts the earlier hypothesis in 21% of held-out cases.
+
+Experiment F3 led by Diego Alvarez tested a transformer model on a dataset of 548000 samples collected in Lisbon. Accuracy reached 99.1% with a learning rate of 1e-3 and batch size 16. Training took 46 hours on 4 GPUs. The result was recorded on 10 November 2023 and contradicts the earlier hypothesis in 27% of held-out cases.
+
+Experiment B37 led by Ingrid Solberg tested a graph model on a dataset of 405000 samples collected in Lisbon. Accuracy reached 90.2% with a learning rate of 3e-4 and batch size 32. Training took 96 hours on 13 GPUs. The result was recorded on 26 September 2023 and contradicts the earlier hypothesis in 28% of held-out cases.
+
+Experiment C39 led by Hannah Cole tested a convolutional model on a dataset of 12000 samples collected in Bergen. Accuracy reached 95.2% with a learning rate of 1e-3 and batch size 16. Training took 1 hours on 13 GPUs. The result was recorded on 18 September 2020 and contradicts the earlier hypothesis in 17% of held-out cases.

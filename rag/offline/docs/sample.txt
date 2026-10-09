@@ -1,0 +1,7 @@
+Cloud4Green is a fictional company that runs sustainable data centers.
+
+Its flagship site, GreenNode One, is powered 100% by solar and wind energy and uses liquid cooling to reduce water usage by 40%.
+
+Support is available Monday to Friday, 9am to 6pm UTC, at support@example.com.
+
+The standard hosting plan costs 49 USD per month and includes 4 vCPUs, 16 GB RAM and 200 GB of SSD storage.
