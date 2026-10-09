@@ -21,19 +21,25 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-OLLAMA = os.getenv("OLLAMA_URL", "http://ollama.llm.svc.cluster.local:11434")
-QDRANT = os.getenv("QDRANT_URL", "http://qdrant.llm.svc.cluster.local:6333")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
-CHAT_MODEL = os.getenv("CHAT_MODEL", "llama3.2:3b")
-COLLECTION = os.getenv("COLLECTION", "docs")
-SAMPLE_DIR = Path(os.getenv("SAMPLE_DOCS_DIR", "/sample-docs"))
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
+# ---------------------------------------------------------------- config
+# All settings come from environment variables (set in the Kubernetes manifests);
+# the defaults point at the in-cluster Services in the "llm" namespace.
+OLLAMA = os.getenv("OLLAMA_URL", "http://ollama.llm.svc.cluster.local:11434")   # LLM server (embeddings + chat)
+QDRANT = os.getenv("QDRANT_URL", "http://qdrant.llm.svc.cluster.local:6333")    # vector database
+EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")  # turns text into vectors
+CHAT_MODEL = os.getenv("CHAT_MODEL", "llama3.2:3b")         # generates the final answer
+COLLECTION = os.getenv("COLLECTION", "docs")                # Qdrant collection name
+SAMPLE_DIR = Path(os.getenv("SAMPLE_DOCS_DIR", "/sample-docs"))  # folder mounted with demo documents
+DOCS_DIR = Path(os.getenv("DOCS_DIR", "/docs"))                  # PVC with your own (large) documents
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))       # max characters per chunk
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100")) # characters shared between neighbouring chunks
 
 log = logging.getLogger("rag")
 logging.basicConfig(level=logging.INFO)
 
+# root_path lets the app work behind an ingress that serves it under a sub-path (e.g. /rag).
 app = FastAPI(title="RAG demo", root_path=os.getenv("ROOT_PATH", ""))
+# One shared async HTTP client for Ollama and Qdrant; long timeout because LLM calls on CPU are slow.
 http = httpx.AsyncClient(timeout=httpx.Timeout(600.0))
 
 
@@ -41,7 +47,7 @@ http = httpx.AsyncClient(timeout=httpx.Timeout(600.0))
 async def pull_models():
     """Make sure both models exist in Ollama (no-op if already pulled)."""
     for model in (EMBED_MODEL, CHAT_MODEL):
-        for attempt in range(30):
+        for attempt in range(30):  # up to ~5 minutes of retries per model
             try:
                 r = await http.post(f"{OLLAMA}/api/pull", json={"name": model, "stream": False})
                 r.raise_for_status()
@@ -54,12 +60,15 @@ async def pull_models():
 
 @app.on_event("startup")
 async def startup():
+    # Run in the background so the API starts serving immediately while models download.
     asyncio.create_task(pull_models())
 
 
 # ---------------------------------------------------------------- helpers
 def chunk_text(text: str) -> list[str]:
     """Paragraph-aware chunking with a small character overlap between chunks."""
+    # Step 1: split on blank lines into paragraphs; paragraphs longer than CHUNK_SIZE
+    # are cut into CHUNK_SIZE pieces that overlap, so no sentence is lost at a cut.
     pieces = []
     for p in re.split(r"\n\s*\n", text):
         p = p.strip()
@@ -68,9 +77,11 @@ def chunk_text(text: str) -> list[str]:
             p = p[CHUNK_SIZE - CHUNK_OVERLAP:]
         if p:
             pieces.append(p)
+    # Step 2: pack consecutive pieces into chunks up to CHUNK_SIZE. When a chunk is full,
+    # start the next one with the tail of the previous (overlap) to keep context across boundaries.
     chunks, cur = [], ""
     for p in pieces:
-        if cur and len(cur) + len(p) + 2 > CHUNK_SIZE:
+        if cur and len(cur) + len(p) + 2 > CHUNK_SIZE:  # +2 = the "\n\n" separator
             chunks.append(cur)
             cur = cur[-CHUNK_OVERLAP:] + "\n\n" + p
         else:
@@ -81,6 +92,7 @@ def chunk_text(text: str) -> list[str]:
 
 
 async def embed(texts: list[str]) -> list[list[float]]:
+    """Convert texts to embedding vectors via Ollama, 16 texts per request."""
     out = []
     for i in range(0, len(texts), 16):
         r = await http.post(f"{OLLAMA}/api/embed", json={"model": EMBED_MODEL, "input": texts[i:i + 16]})
@@ -91,8 +103,9 @@ async def embed(texts: list[str]) -> list[list[float]]:
 
 
 async def ensure_collection(dim: int):
+    """Create the Qdrant collection on first use; `dim` must match the embedding model's output size."""
     r = await http.get(f"{QDRANT}/collections/{COLLECTION}")
-    if r.status_code == 200:
+    if r.status_code == 200:  # already exists
         return
     r = await http.put(f"{QDRANT}/collections/{COLLECTION}",
                        json={"vectors": {"size": dim, "distance": "Cosine"}})
@@ -100,11 +113,13 @@ async def ensure_collection(dim: int):
 
 
 async def ingest_text(source: str, text: str) -> int:
+    """Chunk -> embed -> upsert into Qdrant. Returns the number of chunks stored."""
     chunks = chunk_text(text)
     if not chunks:
         return 0
     vectors = await embed(chunks)
     await ensure_collection(len(vectors[0]))
+    # Each point = vector + payload (original text and where it came from, used later for citations).
     points = [{
         "id": str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source}:{i}")),  # stable ids: re-ingest overwrites
         "vector": v,
@@ -116,6 +131,7 @@ async def ingest_text(source: str, text: str) -> int:
 
 
 async def search(question: str, top_k: int) -> list[dict]:
+    """Retrieval step: embed the question and return the top_k most similar chunks (cosine similarity)."""
     [vec] = await embed([question])
     r = await http.post(f"{QDRANT}/collections/{COLLECTION}/points/search",
                         json={"vector": vec, "limit": top_k, "with_payload": True})
@@ -127,6 +143,7 @@ async def search(question: str, top_k: int) -> list[dict]:
 
 
 async def chat(messages: list[dict]) -> str:
+    """Send a chat to Ollama and return the reply text. Low temperature = more factual, less random."""
     r = await http.post(f"{OLLAMA}/api/chat", json={
         "model": CHAT_MODEL, "messages": messages, "stream": False, "options": {"temperature": 0.2}})
     if r.status_code != 200:
@@ -136,13 +153,15 @@ async def chat(messages: list[dict]) -> str:
 
 # ---------------------------------------------------------------- API
 class Query(BaseModel):
+    """Request body for /query."""
     question: str
-    use_rag: bool = True
-    top_k: int = 4
+    use_rag: bool = True  # False = ask the LLM directly, to compare with RAG
+    top_k: int = 4        # how many chunks to retrieve as context
 
 
 @app.get("/status")
 async def status():
+    """Report whether Ollama/Qdrant are reachable, which models are pulled, and how many chunks are stored."""
     res = {"ollama": False, "qdrant": False, "models": {}, "chunks": 0}
     try:
         tags = (await http.get(f"{OLLAMA}/api/tags")).json()
@@ -161,23 +180,33 @@ async def status():
     return res
 
 
+def extract_text(name: str, data: bytes) -> str:
+    """PDFs are text-extracted page by page, anything else is read as UTF-8."""
+    if name.lower().endswith(".pdf"):
+        from pypdf import PdfReader  # imported lazily; only needed for PDFs
+        return "\n\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages)
+    return data.decode("utf-8", errors="replace")
+
+
 @app.post("/ingest/samples")
 async def ingest_samples():
-    files = sorted(p for p in SAMPLE_DIR.glob("*") if p.is_file() and not p.name.startswith(".."))
+    """Ingest every file in SAMPLE_DIR (ConfigMap) and DOCS_DIR (PVC, recursive); skips hidden/'..' entries."""
+    files = [p for p in SAMPLE_DIR.glob("*") if p.is_file()]
+    files += [p for p in DOCS_DIR.rglob("*") if p.is_file()]
+    files = sorted(p for p in files if not any(part.startswith(".") for part in p.parts[-3:]))
     if not files:
-        raise HTTPException(404, f"No sample docs in {SAMPLE_DIR}")
-    result = {p.name: await ingest_text(p.name, p.read_text(encoding="utf-8")) for p in files}
+        raise HTTPException(404, f"No docs in {SAMPLE_DIR} or {DOCS_DIR}")
+    result = {}
+    for p in files:
+        source = str(p.relative_to(DOCS_DIR)) if DOCS_DIR in p.parents else p.name
+        result[source] = await ingest_text(source, extract_text(p.name, p.read_bytes()))
     return {"ingested_chunks": result}
 
 
 @app.post("/ingest")
 async def ingest(file: UploadFile = File(...)):
-    data = await file.read()
-    if file.filename.lower().endswith(".pdf"):
-        from pypdf import PdfReader
-        text = "\n\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages)
-    else:
-        text = data.decode("utf-8", errors="replace")
+    """Ingest an uploaded file."""
+    text = extract_text(file.filename, await file.read())
     n = await ingest_text(file.filename, text)
     if n == 0:
         raise HTTPException(400, "No text found in file")
@@ -186,13 +215,16 @@ async def ingest(file: UploadFile = File(...)):
 
 @app.post("/query")
 async def query(q: Query):
-    if not q.use_rag:
+    """Answer a question, either with RAG or directly from the LLM."""
+    if not q.use_rag:  # baseline: no retrieval, the model answers from its own training only
         answer = await chat([{"role": "user", "content": q.question}])
         return {"mode": "plain-llm", "answer": answer, "sources": []}
 
+    # RAG: 1) retrieve relevant chunks, 2) put them in the prompt, 3) let the LLM answer from them.
     hits = await search(q.question, q.top_k)
     if not hits:
         return {"mode": "rag", "answer": "No documents found. Ingest some documents first.", "sources": []}
+    # Number the chunks so the model can cite them as [1], [2], ...
     context = "\n\n".join(f"[{i + 1}] (source: {h['source']})\n{h['text']}" for i, h in enumerate(hits))
     system = ("You answer questions using ONLY the context below. If the answer is not in the context, "
               "say you don't know. Cite sources like [1].\n\nContext:\n" + context)
@@ -202,6 +234,7 @@ async def query(q: Query):
 
 @app.delete("/collection")
 async def wipe():
+    """Delete the whole Qdrant collection (it is recreated on the next ingest)."""
     r = await http.delete(f"{QDRANT}/collections/{COLLECTION}")
     return {"deleted": r.status_code == 200}
 
@@ -211,6 +244,8 @@ async def ui():
     return UI_HTML
 
 
+# Single-page test UI served at "/". Plain HTML + JS, no build step.
+# JS calls use paths relative to the current URL so it works behind an ingress sub-path.
 UI_HTML = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RAG demo</title>
 <style>
