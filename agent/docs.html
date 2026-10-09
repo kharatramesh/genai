@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Frameworks Guide</title>
+<style>
+  :root { --bg:#fff; --fg:#1f2328; --muted:#59636e; --card:#f6f8fa; --line:#d1d9e0; --accent:#0969da; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --card:#151b23; --line:#3d444d; --accent:#4493f8; }
+  }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,sans-serif; margin:0; }
+  main { max-width:860px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { margin-top:0; } h2 { margin-top:40px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  a { color:var(--accent); }
+  pre, code { font-family:ui-monospace,Consolas,monospace; font-size:14px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; }
+  code { background:var(--card); padding:1px 5px; border-radius:4px; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .note { border-left:4px solid var(--accent); background:var(--card); padding:8px 14px; border-radius:4px; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>Agent Frameworks Guide</h1>
+<p class="muted">Three terminal agents (no FastAPI), each built with a different framework and all driven by a local Ollama model.</p>
+
+<h2>Overview</h2>
+<table>
+  <tr><th>Folder</th><th>Framework</th><th>Style</th><th>Tools / Roles</th></tr>
+  <tr><td><code>langchain_agent/</code></td><td>LangChain</td><td>Single tool-calling agent in a chat loop</td><td><code>create_file</code>, <code>read_file</code>, <code>list_files</code></td></tr>
+  <tr><td><code>langgraph_agent/</code></td><td>LangGraph</td><td>Explicit graph: model node &harr; tool node</td><td>Same three tools</td></tr>
+  <tr><td><code>crewai_agent/</code></td><td>CrewAI</td><td>Multi-agent sequential crew</td><td>Researcher &rarr; Writer</td></tr>
+</table>
+
+<h2>Prerequisites</h2>
+<ul>
+  <li>Python 3.10+</li>
+  <li><a href="https://ollama.com">Ollama</a> running on <code>http://localhost:11434</code> with the model pulled: <code>ollama pull qwen3:8b</code></li>
+  <li>Packages:
+<pre><code>pip install langchain langchain-ollama langgraph crewai</code></pre></li>
+</ul>
+
+<h2>1. LangChain &mdash; <code>langchain_agent/agent.py</code></h2>
+<p>Tools are plain Python functions decorated with <code>@tool</code>. <code>create_agent</code> wires the model and tools into a ready-made agent loop; you only call <code>invoke</code>.</p>
+<pre><code>llm = ChatOllama(model="qwen3:8b", base_url="http://localhost:11434")
+agent = create_agent(llm, tools=[create_file, read_file, list_files])
+result = agent.invoke({"messages": [{"role": "user", "content": question}]})</code></pre>
+<p>Run:</p>
+<pre><code>python langchain_agent/agent.py</code></pre>
+<p>Files are written to <code>langchain_agent/workspace/</code>. Press Enter on a blank line to quit.</p>
+
+<h2>2. LangGraph &mdash; <code>langgraph_agent/agent.py</code></h2>
+<p>The same tools, but the control flow is explicit. State is a list of messages; the graph loops between the model and the tool executor until the model replies without a tool call.</p>
+<pre><code>START &rarr; model &rarr; (tool call?) &rarr; tools &rarr; model &rarr; ... &rarr; END</code></pre>
+<pre><code>graph = StateGraph(MessagesState)
+graph.add_node("model", call_model)
+graph.add_node("tools", ToolNode(tools))
+graph.add_edge(START, "model")
+graph.add_conditional_edges("model", tools_condition)
+graph.add_edge("tools", "model")
+app = graph.compile()</code></pre>
+<p>Run:</p>
+<pre><code>python langgraph_agent/agent.py</code></pre>
+<p>Files are written to <code>langgraph_agent/workspace/</code>. Choose LangGraph over <code>create_agent</code> when you need custom branching, human approval steps or persistent state.</p>
+
+<h2>3. CrewAI &mdash; <code>crewai_agent/agent.py</code></h2>
+<p>Two agents with distinct roles collaborate through tasks. The writer's task takes the researcher's output as <code>context</code>. The crew runs sequentially.</p>
+<pre><code>llm = LLM(model="ollama/qwen3:8b", base_url="http://localhost:11434")
+crew = Crew(agents=[researcher, writer],
+            tasks=[research_task, write_task],
+            process=Process.sequential)
+crew.kickoff(inputs={"topic": topic})</code></pre>
+<p>Run (topic is optional, default "agentic AI"):</p>
+<pre><code>python crewai_agent/agent.py "the Python language"</code></pre>
+<p class="note">On Windows the script forces UTF-8 on stdout/stderr, because CrewAI prints emoji that the default cp1252 console cannot encode.</p>
+
+<h2>Test results</h2>
+<p>Each script was run against <code>qwen3:8b</code> on this machine.</p>
+<table>
+  <tr><th>Script</th><th>Prompt</th><th>Result</th></tr>
+  <tr><td>LangChain</td><td>Create <code>hello_lc.txt</code> with text, then list files</td><td>Pass: file created and listed</td></tr>
+  <tr><td>LangGraph</td><td>Create <code>hello_lg.txt</code> with text, then list files</td><td>Pass: file created and listed</td></tr>
+  <tr><td>CrewAI</td><td>Topic "the Python language"</td><td>Pass: 3-paragraph summary produced</td></tr>
+</table>
+
+<h2>Troubleshooting</h2>
+<table>
+  <tr><th>Symptom</th><th>Fix</th></tr>
+  <tr><td>Connection refused on port 11434</td><td>Start Ollama (<code>ollama serve</code>).</td></tr>
+  <tr><td>Model not found</td><td><code>ollama pull qwen3:8b</code>, or change the model name in the script.</td></tr>
+  <tr><td><code>charmap</code> codec errors</td><td>Set <code>PYTHONUTF8=1</code> or keep the <code>reconfigure</code> lines in the CrewAI script.</td></tr>
+  <tr><td>Slow replies</td><td>Local 8B models are slow on CPU; use a smaller model such as <code>llama3.2</code>.</td></tr>
+  <tr><td>Tool never called</td><td>Use a model that supports tool calling; small models may ignore tools.</td></tr>
+</table>
+</main>
+</body>
+</html>
