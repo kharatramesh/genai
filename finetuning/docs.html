@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LoRA Fine-Tuning Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a single 920px reading column; diagrams and charts break out to 1080px "plates" like a lab manual. */
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --sunk: #eef1f5;
+  --fg: #141a22;
+  --fg-2: #47505c;
+  --fg-3: #6b7480;
+  --line: #d8dde4;
+  --accent: #1f5fbf;
+  --accent-soft: #e3ecfa;
+  --frozen: #8a94a3;
+  --frozen-fill: #e4e8ee;
+  --train: #eb6834;
+  --train-soft: #fde8de;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --good: #0f7b3f; --good-soft: #e1f3e8;
+  --code-bg: #0f1722; --code-fg: #dce3ec; --code-kw: #7fb4ff; --code-str: #9fd8a8; --code-com: #7d8896;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1218; --surface: #151b23; --sunk: #1b222c; --fg: #e8edf3; --fg-2: #b4bdc8; --fg-3: #8d97a3;
+    --line: #2c3540; --accent: #6aa3f5; --accent-soft: #1a2a42; --frozen: #8d97a3; --frozen-fill: #252d38;
+    --train: #f07a48; --train-soft: #3a2218; --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --good: #4cc27f; --good-soft: #15301f; --code-bg: #0a0e14; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1218; --surface: #151b23; --sunk: #1b222c; --fg: #e8edf3; --fg-2: #b4bdc8; --fg-3: #8d97a3;
+  --line: #2c3540; --accent: #6aa3f5; --accent-soft: #1a2a42; --frozen: #8d97a3; --frozen-fill: #252d38;
+  --train: #f07a48; --train-soft: #3a2218; --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good: #4cc27f; --good-soft: #15301f; --code-bg: #0a0e14; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.62 var(--font-body); }
+.page { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 96px; }
+.col { max-width: 920px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.85rem; font-weight: 600; }
+h3 { font-size: 1.2rem; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+.eyebrow { font: 500 0.75rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+.muted { color: var(--fg-2); }
+.small { font-size: 0.875rem; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header */
+header.hero { display: grid; gap: 18px; padding-bottom: 32px; border-bottom: 1px solid var(--line); }
+header.hero .lede { font-size: 1.15rem; color: var(--fg-2); max-width: 62ch; }
+.glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 8px; }
+.glance div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.glance b { display: block; font: 600 1.7rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.glance span { font-size: 0.85rem; color: var(--fg-2); }
+.glance .hot b { color: var(--train); }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding-block: 16px; font-size: 0.9rem; border-bottom: 1px solid var(--line); }
+nav.toc a { text-decoration: none; color: var(--fg-2); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+
+section { display: grid; gap: 18px; padding-top: 56px; }
+section > header { display: grid; gap: 6px; }
+.plate { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 12px; min-width: 0; }
+.plate figcaption, .caption { font-size: 0.85rem; color: var(--fg-2); max-width: 80ch; }
+.scroll { overflow-x: auto; }
+svg { display: block; max-width: 100%; height: auto; }
+svg text { font-family: var(--font-body); fill: var(--fg); }
+svg .t2 { fill: var(--fg-2); } svg .t3 { fill: var(--fg-3); }
+svg .mono { font-family: var(--font-mono); }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.grid2 > * { min-width: 0; }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 0.78rem/1.2 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-3); }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 500 0.72rem/1 var(--font-mono); padding: 4px 7px; border-radius: 99px; background: var(--sunk); color: var(--fg-2); white-space: nowrap; }
+.pill.yes { background: var(--good-soft); color: var(--good); }
+.pill.train { background: var(--train-soft); color: var(--train); }
+
+/* code */
+pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 0.84rem/1.55 var(--font-mono); }
+pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+pre .k { color: var(--code-kw); } pre .s { color: var(--code-str); } pre .c { color: var(--code-com); font-style: italic; }
+.codehead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.codehead code { background: none; padding: 0; font-weight: 500; }
+
+/* pipeline */
+.pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; counter-reset: step; }
+.pipeline a { display: grid; gap: 6px; text-decoration: none; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; position: relative; }
+.pipeline a:hover, .pipeline a:focus-visible { border-color: var(--accent); }
+.pipeline .n { font: 600 0.75rem/1 var(--font-mono); color: var(--accent); }
+.pipeline b { font: 600 1rem/1.2 var(--font-display); }
+.pipeline span { font-size: 0.8rem; color: var(--fg-2); }
+.pipeline code { font-size: 0.72rem; justify-self: start; }
+
+/* RAFT example */
+.raft { display: grid; gap: 8px; }
+.passage { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 0.83rem; background: var(--surface); display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
+.passage .idx { font: 500 0.78rem var(--font-mono); color: var(--fg-3); }
+.passage.gold { border-color: var(--good); background: var(--good-soft); }
+.passage mark { background: transparent; color: var(--good); font-weight: 600; }
+.qa { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 0.92rem; align-items: baseline; }
+.qa .lbl { font: 500 0.72rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); }
+.answer { font-weight: 600; color: var(--train); }
+
+/* token masking strip */
+.tokens { display: flex; flex-wrap: wrap; gap: 3px; font: 0.78rem/1 var(--font-mono); }
+.tokens span { padding: 5px 6px; border-radius: 4px; background: var(--frozen-fill); color: var(--fg-3); }
+.tokens span.t { background: var(--train-soft); color: var(--train); font-weight: 500; outline: 1px solid var(--train); }
+.tokens span.gap { background: none; color: var(--fg-3); }
+
+/* memory per parameter bars */
+.membar { display: grid; gap: 10px; }
+.membar .row { display: grid; grid-template-columns: 120px 1fr 64px; gap: 10px; align-items: center; font-size: 0.88rem; }
+.membar .bar { display: flex; gap: 2px; height: 26px; }
+.membar .bar i { display: block; height: 100%; border-radius: 3px; font: 500 0.68rem/26px var(--font-mono); font-style: normal; color: #fff; text-align: center; overflow: hidden; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: var(--fg-2); }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+/* calculator */
+.calc { display: grid; grid-template-columns: minmax(0, 280px) minmax(0, 1fr); gap: 20px; }
+.calc label { display: grid; gap: 6px; font-size: 0.85rem; color: var(--fg-2); }
+.calc select, .calc input[type=range] { width: 100%; font: inherit; }
+.calc select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
+.calc .controls { display: grid; gap: 16px; align-content: start; }
+.calc .out { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.calc .out div { background: var(--sunk); border-radius: 8px; padding: 10px 12px; }
+.calc .out b { display: block; font: 600 1.35rem/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
+.calc .out span { font-size: 0.78rem; color: var(--fg-2); }
+input[type=range] { accent-color: var(--train); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 0.95rem; }
+.callout p + p { margin-top: 6px; }
+ul.tight { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+details { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+details summary { cursor: pointer; padding: 10px 14px; font-weight: 500; }
+details > div { padding: 0 14px 14px; display: grid; gap: 10px; }
+
+#tip { position: fixed; pointer-events: none; z-index: 10; background: var(--fg); color: var(--bg); font-size: 0.8rem; padding: 6px 9px; border-radius: 6px; max-width: 260px; }
+
+@media (max-width: 640px) {
+  .calc { grid-template-columns: 1fr; }
+  .membar .row { grid-template-columns: 86px 1fr 52px; font-size: 0.8rem; }
+  .plate { padding: 14px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .membar .bar i, .calc .fill { transition: width .35s ease; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero col">
+  <div class="eyebrow">GenAI workshop · Module: Model fine-tuning</div>
+  <h1>LoRA Fine-Tuning Lab</h1>
+  <p class="lede">Teach a small open model to answer questions from retrieved company documents, then compare what full fine-tuning, LoRA, QLoRA and Unsloth cost in parameters, disk and GPU memory.</p>
+  <div class="glance">
+    <div><b class="num">494 M</b><span>parameters in the base model (Qwen2.5-0.5B-Instruct)</span></div>
+    <div class="hot"><b class="num">8.8 M</b><span>parameters we actually train with LoRA r=16 (1.78%)</span></div>
+    <div><b class="num">988 MB</b><span>base model on disk (16-bit safetensors)</span></div>
+    <div class="hot"><b class="num">~35 MB</b><span>the LoRA adapter you ship (28× smaller)</span></div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#concept">1 · What fine-tuning is</a>
+  <a href="#full">2 · Why full fine-tuning is expensive</a>
+  <a href="#lora">3 · LoRA</a>
+  <a href="#qlora">4 · QLoRA</a>
+  <a href="#advanced">5 · Advanced tools</a>
+  <a href="#rag">6 · The RAG demo</a>
+  <a href="#steps">7 · Step-by-step code</a>
+  <a href="#size">8 · Size comparison</a>
+  <a href="#results">9 · Results</a>
+  <a href="#deploy">10 · Deploying adapters</a>
+  <a href="#setup">11 · Setup and exercises</a>
+</nav>
+
+<!-- ============================================================ 1 -->
+<section id="concept">
+  <header class="col">
+    <div class="eyebrow">1 · Concept</div>
+    <h2>What fine-tuning is</h2>
+  </header>
+  <p class="col">A large language model learns in stages. <b>Pre-training</b> on trillions of tokens teaches it language and world knowledge. <b>Instruction tuning</b> teaches it to follow requests and chat. <b>Fine-tuning</b> is the last stage, where you continue training on a few hundred to a few thousand examples of <i>your</i> task. Then the model behaves the way you need: your output format, your tone, your domain vocabulary, your refusal rules.</p>
+
+  <figure class="plate" style="margin:0">
+    <div class="scroll">
+    <svg viewBox="0 0 1000 210" role="img" aria-label="Training stages: pre-training, instruction tuning, then your fine-tune, with data size and cost shrinking at each stage">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg-3)"/></marker>
+      </defs>
+      <g>
+        <rect x="10" y="30" width="290" height="120" rx="10" style="fill:var(--sunk);stroke:var(--line)"/>
+        <text x="30" y="62" font-size="13" class="t3 mono">STAGE 1</text>
+        <text x="30" y="88" font-size="21" font-weight="600">Pre-training</text>
+        <text x="30" y="113" font-size="14" class="t2">~18 trillion tokens of web, code, books</text>
+        <text x="30" y="134" font-size="14" class="t2">thousands of GPUs · weeks · $$$$$</text>
+      </g>
+      <line x1="305" y1="90" x2="350" y2="90" style="stroke:var(--fg-3);stroke-width:2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="355" y="30" width="290" height="120" rx="10" style="fill:var(--sunk);stroke:var(--line)"/>
+        <text x="375" y="62" font-size="13" class="t3 mono">STAGE 2</text>
+        <text x="375" y="88" font-size="21" font-weight="600">Instruction tuning</text>
+        <text x="375" y="113" font-size="14" class="t2">~1 M chat / instruction examples</text>
+        <text x="375" y="134" font-size="14" class="t2">done by the vendor → "-Instruct" model</text>
+      </g>
+      <line x1="650" y1="90" x2="695" y2="90" style="stroke:var(--fg-3);stroke-width:2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="700" y="30" width="290" height="120" rx="10" style="fill:var(--train-soft);stroke:var(--train);stroke-width:1.5"/>
+        <text x="720" y="62" font-size="13" class="mono" style="fill:var(--train)">STAGE 3 · THIS LAB</text>
+        <text x="720" y="88" font-size="21" font-weight="600">Your fine-tune</text>
+        <text x="720" y="113" font-size="14" class="t2">1,583 RAG examples from our docs</text>
+        <text x="720" y="134" font-size="14" class="t2">1 GPU (or CPU) · minutes · ~$0</text>
+      </g>
+      <text x="10" y="190" font-size="13" class="t3">Each stage starts from the weights of the previous one. You only pay for the last stage.</text>
+    </svg>
+    </div>
+  </figure>
+
+  <div class="grid2">
+    <div class="plate">
+      <h3>Prompting vs RAG vs fine-tuning</h3>
+      <p class="small muted">They solve different problems, and production systems often combine them.</p>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>Technique</th><th>Changes</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td><b>Prompting</b></td><td>The input only</td><td>Quick behaviour tweaks, few examples</td></tr>
+          <tr><td><b>RAG</b></td><td>Knowledge supplied at query time</td><td>Facts that change, citations, large document sets</td></tr>
+          <tr><td><b>Fine-tuning</b></td><td>The model's weights</td><td>Format, style, domain skill, latency (shorter prompts), smaller models</td></tr>
+          <tr><td><b>RAG + FT</b></td><td>Both</td><td>A model trained to <i>use</i> retrieved context well. This is our demo.</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="plate">
+      <h3>Rule of thumb</h3>
+      <div class="callout">
+        <p><b>RAG gives the model knowledge. Fine-tuning gives the model skill.</b></p>
+        <p>Don't fine-tune facts that change weekly into weights: re-indexing a document is cheaper than retraining. Fine-tune the <i>behaviour</i>: read the passages, pick the right one among look-alikes, answer in one short line, and say "I don't know" when the answer isn't there.</p>
+      </div>
+      <ul class="tight small">
+        <li><b>Data:</b> 500–5,000 clean examples beat 100,000 noisy ones.</li>
+        <li><b>Evaluation first:</b> measure the base model before you train, so you can prove the gain.</li>
+        <li><b>Hold out</b> evaluation data the model never sees during training.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="full">
+  <header class="col">
+    <div class="eyebrow">2 · The problem</div>
+    <h2>Why full fine-tuning is expensive</h2>
+  </header>
+  <p class="col">Full fine-tuning updates every weight. With the Adam optimizer in mixed precision, each parameter costs about <b>16 bytes</b> of GPU memory before you count activations. That's 8× the size of the model you are fine-tuning.</p>
+  <figure class="plate" style="margin:0">
+    <div class="membar" id="membar"></div>
+    <div class="legend">
+      <span><i style="background:var(--s1)"></i>16-bit weights</span>
+      <span><i style="background:var(--s3)"></i>16-bit gradients</span>
+      <span><i style="background:var(--frozen)"></i>fp32 master weights</span>
+      <span><i style="background:var(--s2)"></i>Adam moments (m, v)</span>
+    </div>
+    <figcaption>Bytes of GPU memory per model parameter (excluding activations). LoRA and QLoRA keep gradients and optimizer state only for the ~1% of parameters in the adapters, so their cost is almost entirely the frozen weights.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="lora">
+  <header class="col">
+    <div class="eyebrow">3 · Parameter-efficient fine-tuning</div>
+    <h2>LoRA: train a small update, freeze the rest</h2>
+  </header>
+  <p class="col"><b>LoRA</b> (Low-Rank Adaptation, Hu et al. 2021) is based on an observation: the <i>change</i> a model needs during fine-tuning has low rank. Instead of learning a full update ΔW for a <code>d × k</code> weight matrix, LoRA learns two thin matrices <code>B (d × r)</code> and <code>A (r × k)</code> with r ≪ d. The original W stays frozen.</p>
+
+  <figure class="plate" style="margin:0">
+    <div class="scroll">
+    <svg viewBox="0 0 1000 330" role="img" aria-label="LoRA diagram: input x goes through frozen W and through the trainable A then B path; outputs are added">
+      <text x="20" y="34" font-size="15" font-weight="600">One attention projection in Qwen2.5-0.5B: q_proj, 896 × 896</text>
+      <!-- x -->
+      <rect x="20" y="130" width="34" height="110" rx="4" style="fill:var(--sunk);stroke:var(--line)"/>
+      <text x="37" y="262" font-size="14" text-anchor="middle" class="mono">x</text>
+      <text x="37" y="280" font-size="11" text-anchor="middle" class="t3">896</text>
+      <!-- W -->
+      <line x1="58" y1="185" x2="118" y2="110" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+      <line x1="58" y1="185" x2="118" y2="230" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+      <rect x="125" y="50" width="150" height="150" rx="4" style="fill:var(--frozen-fill);stroke:var(--frozen)"/>
+      <g style="stroke:var(--frozen);opacity:.35">
+        <line x1="125" y1="80" x2="275" y2="80"/><line x1="125" y1="110" x2="275" y2="110"/><line x1="125" y1="140" x2="275" y2="140"/><line x1="125" y1="170" x2="275" y2="170"/>
+        <line x1="155" y1="50" x2="155" y2="200"/><line x1="185" y1="50" x2="185" y2="200"/><line x1="215" y1="50" x2="215" y2="200"/><line x1="245" y1="50" x2="245" y2="200"/>
+      </g>
+      <text x="200" y="132" font-size="30" font-weight="600" text-anchor="middle">W</text>
+      <text x="200" y="158" font-size="12" text-anchor="middle" class="t2">frozen · 896 × 896</text>
+      <text x="200" y="222" font-size="13" text-anchor="middle" class="mono t2">802,816 params</text>
+      <!-- A, B -->
+      <rect x="125" y="250" width="150" height="16" rx="3" style="fill:var(--train)"/>
+      <text x="200" y="285" font-size="12" text-anchor="middle" class="t2">A · r × 896 (r = 16)</text>
+      <line x1="280" y1="258" x2="330" y2="258" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+      <rect x="336" y="185" width="16" height="140" rx="3" style="fill:var(--train)"/>
+      <text x="364" y="260" font-size="12" class="t2">B · 896 × r</text>
+      <text x="364" y="278" font-size="13" class="mono" style="fill:var(--train)">28,672 trainable</text>
+      <text x="364" y="296" font-size="12" class="t2">(3.6% of W)</text>
+      <!-- sum -->
+      <line x1="280" y1="125" x2="520" y2="170" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+      <line x1="356" y1="230" x2="520" y2="190" style="stroke:var(--train);stroke-width:1.5" marker-end="url(#arr)"/>
+      <circle cx="540" cy="180" r="18" style="fill:var(--surface);stroke:var(--fg-2);stroke-width:1.5"/>
+      <text x="540" y="187" font-size="22" text-anchor="middle">+</text>
+      <line x1="560" y1="180" x2="610" y2="180" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+      <rect x="616" y="125" width="34" height="110" rx="4" style="fill:var(--sunk);stroke:var(--line)"/>
+      <text x="633" y="257" font-size="14" text-anchor="middle" class="mono">h</text>
+      <!-- formula -->
+      <g transform="translate(690,70)">
+        <rect x="0" y="0" width="295" height="230" rx="8" style="fill:var(--sunk)"/>
+        <text x="16" y="34" font-size="18" class="mono">h = W·x + (α/r)·B·A·x</text>
+        <text x="16" y="66" font-size="13" class="t2">• W never changes. Only A and B learn.</text>
+        <text x="16" y="88" font-size="13" class="t2">• B starts at zero, so training starts</text>
+        <text x="28" y="106" font-size="13" class="t2">exactly from the base model.</text>
+        <text x="16" y="128" font-size="13" class="t2">• α/r scales the update (we use α = 2r).</text>
+        <text x="16" y="150" font-size="13" class="t2">• After training you can merge:</text>
+        <text x="28" y="172" font-size="14" class="mono">W' = W + (α/r)·B·A</text>
+        <text x="16" y="198" font-size="13" class="t2">  → zero extra latency at inference.</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Applied to all 7 linear layers (q, k, v, o, gate, up, down) of all 24 transformer blocks, rank 16 gives 8,798,208 trainable parameters. That's 1.78% of the model.</figcaption>
+  </figure>
+
+  <div class="plate">
+    <div class="codehead"><h3>Try it: LoRA adapter calculator</h3><span class="small muted">Same formula as <code>06_size_report.py</code></span></div>
+    <div class="calc">
+      <div class="controls">
+        <label for="calc-model">Base model
+          <select id="calc-model">
+            <option value="0">Qwen2.5-0.5B (this lab)</option>
+            <option value="1">Llama-3.1-8B</option>
+            <option value="2">Llama-3.1-70B</option>
+          </select>
+        </label>
+        <label for="calc-rank">LoRA rank r = <b id="calc-rank-v" class="num">16</b>
+          <input id="calc-rank" type="range" min="0" max="7" step="1" value="2">
+        </label>
+        <p class="small muted">Rank is the main capacity knob. 8–16 is enough for format and style tasks. 32–128 helps when the task adds a lot of new skill.</p>
+      </div>
+      <div class="out">
+        <div><b id="o-params">—</b><span>trainable parameters</span></div>
+        <div><b id="o-pct">—</b><span>of the base model</span></div>
+        <div><b id="o-mb">—</b><span>adapter file (16-bit)</span></div>
+        <div><b id="o-base">—</b><span>base model file (16-bit)</span></div>
+        <div><b id="o-ratio">—</b><span>base ÷ adapter</span></div>
+        <div><b id="o-opt">—</b><span>optimizer + grad memory for the adapter</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="plate">
+    <h3>LoRA hyper-parameters used in this lab</h3>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Setting</th><th>Value</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>r</code></td><td class="num">16</td><td>Rank of A and B: capacity of the update.</td></tr>
+        <tr><td><code>lora_alpha</code></td><td class="num">32 (= 2r)</td><td>Scales the update by α/r. Keeping α = 2r means you rarely retune the LR when you change r.</td></tr>
+        <tr><td><code>target_modules</code></td><td><code>"all-linear"</code></td><td>Adapters on attention and MLP layers. Better than attention-only for most tasks.</td></tr>
+        <tr><td><code>lora_dropout</code></td><td class="num">0.05</td><td>Regularization for small datasets.</td></tr>
+        <tr><td><code>learning_rate</code></td><td class="num">2e-4</td><td>About 10× higher than full fine-tuning; adapters start at zero.</td></tr>
+        <tr><td>batch</td><td class="num">4 × 4 accumulation = 16</td><td>Use <code>--batch-size 1</code> on small GPUs; accumulation keeps the effective batch at 16.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="qlora">
+  <header class="col">
+    <div class="eyebrow">4 · Quantized LoRA</div>
+    <h2>QLoRA: the same adapters on a 4-bit base</h2>
+  </header>
+  <p class="col">With LoRA, the frozen base weights dominate memory. <b>QLoRA</b> (Dettmers et al. 2023) stores them in 4 bits instead of 16. That cuts their size about 3.5×, enough to fine-tune a 65B model on one 48 GB GPU. Each layer is de-quantized to 16-bit just in time for its matrix multiply. Gradients flow through it into the 16-bit adapters.</p>
+
+  <div class="grid2">
+    <figure class="plate" style="margin:0">
+      <h3>Idea 1 · NF4 "NormalFloat" 4-bit</h3>
+      <svg viewBox="0 0 460 230" role="img" aria-label="Normal distribution of weights with 16 NF4 levels, denser near zero">
+        <g id="nf4"></g>
+      </svg>
+      <figcaption>Trained weights are roughly normally distributed. NF4 places its 16 levels at the normal distribution's quantiles: dense near zero where most weights are, sparse in the tails. Each level holds the same share of weights, so information loss is lower than with evenly spaced int4.</figcaption>
+    </figure>
+    <figure class="plate" style="margin:0">
+      <h3>The QLoRA stack</h3>
+      <svg viewBox="0 0 460 250" role="img" aria-label="QLoRA stack: 4-bit frozen base, dequantized to 16-bit for compute, LoRA adapters trained in 16/32-bit, paged optimizer">
+        <rect x="20" y="20" width="420" height="44" rx="6" style="fill:var(--train-soft);stroke:var(--train)"/>
+        <text x="36" y="47" font-size="14" font-weight="600" style="fill:var(--train)">LoRA adapters A, B · 16/32-bit · trainable</text>
+        <rect x="20" y="74" width="420" height="44" rx="6" style="fill:var(--sunk);stroke:var(--line)"/>
+        <text x="36" y="101" font-size="14">Compute in bf16/fp16 (de-quantize on the fly)</text>
+        <rect x="20" y="128" width="420" height="44" rx="6" style="fill:var(--frozen-fill);stroke:var(--frozen)"/>
+        <text x="36" y="155" font-size="14" font-weight="600">Frozen base · NF4 4-bit + double-quant scales</text>
+        <rect x="20" y="182" width="420" height="44" rx="6" style="fill:none;stroke:var(--frozen);stroke-dasharray:5 4"/>
+        <text x="36" y="209" font-size="14" class="t2">Paged AdamW 8-bit · spills to CPU RAM on spikes</text>
+        <text x="20" y="246" font-size="12" class="t3">Idea 2: double quantization (saves ~0.4 bit/param) · Idea 3: paged optimizers</text>
+      </svg>
+      <figcaption>In code, QLoRA is plain LoRA plus a <code>BitsAndBytesConfig</code>, <code>prepare_model_for_kbit_training()</code> and <code>optim="paged_adamw_8bit"</code>.</figcaption>
+    </figure>
+  </div>
+
+  <div class="plate">
+    <h3>LoRA or QLoRA?</h3>
+    <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>LoRA</th><th>QLoRA</th></tr></thead>
+      <tbody>
+        <tr><td>Base weights</td><td>16-bit</td><td>4-bit NF4</td></tr>
+        <tr><td>GPU memory</td><td>~2 bytes / param</td><td>~0.5–0.7 bytes / param</td></tr>
+        <tr><td>Speed</td><td>Faster</td><td>~20–40% slower (de-quantization)</td></tr>
+        <tr><td>Quality</td><td>Reference</td><td>Usually within noise of LoRA</td></tr>
+        <tr><td>Hardware</td><td>Any GPU, or CPU for tiny models</td><td>NVIDIA GPU (bitsandbytes)</td></tr>
+        <tr><td>Pick it when</td><td>The 16-bit model fits in VRAM</td><td>It doesn't, or you want a bigger model on the same GPU</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="advanced">
+  <header class="col">
+    <div class="eyebrow">5 · Beyond plain LoRA</div>
+    <h2>Advanced tools and variants</h2>
+  </header>
+  <p class="col">The field moves fast. These are the methods worth knowing. The first four run in this lab's code.</p>
+  <div class="plate">
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Tool / method</th><th>Idea</th><th>Why use it</th><th>In this lab</th></tr></thead>
+      <tbody>
+        <tr><td><b>Unsloth</b></td><td>Hand-written Triton kernels for attention, MLP, RoPE and loss, plus offloaded gradient checkpointing</td><td>~2× faster, 50–70% less VRAM, one-line GGUF export to Ollama</td><td><span class="pill yes">04_unsloth_finetune.py</span></td></tr>
+        <tr><td><b>DoRA</b></td><td>Splits each weight into <i>magnitude</i> × <i>direction</i>; LoRA updates the direction and a vector learns the magnitude</td><td>Closer to full fine-tuning quality at low rank; +~3% params</td><td><span class="pill yes">--variant dora</span></td></tr>
+        <tr><td><b>rsLoRA</b></td><td>Scales by α/√r instead of α/r</td><td>High ranks (64–256) keep learning instead of stalling</td><td><span class="pill yes">--variant rslora</span></td></tr>
+        <tr><td><b>RAFT</b></td><td>Fine-tune on RAG-shaped prompts with distractor passages and "no answer" cases</td><td>The model learns to <i>use</i> retrieval and to refuse</td><td><span class="pill yes">01_build_dataset.py</span></td></tr>
+        <tr><td>PiSSA / OLoRA</td><td>Initialize A, B from the principal singular vectors of W</td><td>Faster convergence. PEFT: <code>init_lora_weights="pissa"</code></td><td><span class="pill">exercise</span></td></tr>
+        <tr><td>LoRA+</td><td>Higher learning rate for B than for A</td><td>~2× faster convergence. PEFT: <code>create_loraplus_optimizer</code></td><td><span class="pill">exercise</span></td></tr>
+        <tr><td>Axolotl · LLaMA-Factory · torchtune</td><td>YAML / web-UI training frameworks over the same PEFT + bitsandbytes stack</td><td>Multi-GPU (FSDP, DeepSpeed), many recipes, no code</td><td><span class="pill">reference</span></td></tr>
+        <tr><td>TRL: DPO · ORPO · GRPO</td><td>Preference and reinforcement fine-tuning, usually with LoRA adapters</td><td>After SFT: align answers with human preference or verifiable rewards</td><td><span class="pill">next module</span></td></tr>
+        <tr><td>Multi-LoRA serving (vLLM, LoRAX)</td><td>One base model in memory, many adapters swapped per request</td><td>Serve 100 customer-specific fine-tunes for the price of one</td><td><span class="pill">section 10</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="rag">
+  <header class="col">
+    <div class="eyebrow">6 · The demo</div>
+    <h2>Fine-tuning a model for RAG</h2>
+  </header>
+  <p class="col">We reuse the documents from the RAG module: HR policies, support FAQs, product manuals, incident reports and lab notebooks, as <code>.txt</code> and <code>.pdf</code>. They are hard for RAG on purpose. Every document holds dozens of near-identical paragraphs that differ only in names, numbers and IDs. Retrieval returns three look-alike passages, and a small base model often picks the wrong one, rambles, or invents an answer.</p>
+
+  <figure class="plate" style="margin:0">
+    <div class="codehead"><h3>One RAFT training example</h3><span class="small muted">from <code>data/train.jsonl</code></span></div>
+    <div class="raft">
+      <div class="passage"><span class="idx">[1]</span><span>At Alder &amp; Finch, the leave policy was last revised on 12 April 2020 by Yuki Mori. Employees in Hamburg are entitled to 5 days per year… Policy reference number: POL-8612.</span><span class="pill">distractor</span></div>
+      <div class="passage gold"><span class="idx">[2]</span><span>At Brightwater Labs, the equipment policy was last revised on 8 April 2023 by <mark>Lena Fischer</mark>. Employees in Denver are entitled to 10 days per year… Policy reference number: <mark>POL-6957</mark>.</span><span class="pill yes">golden</span></div>
+      <div class="passage"><span class="idx">[3]</span><span>At Brightwater Labs, the code of conduct policy was last revised on 25 January 2021 by Kofi Mensah. Employees in Osaka are entitled to 6 days per year… Policy reference number: POL-1873.</span><span class="pill">distractor</span></div>
+      <div class="qa">
+        <span class="lbl">Question</span><span>Who last revised policy POL-6957?</span>
+        <span class="lbl">Target</span><span class="answer">Lena Fischer</span>
+      </div>
+    </div>
+    <figcaption>The golden passage is shuffled to a random position among same-type distractors. In 20% of examples it is removed and the target becomes <b>"I don't know."</b> That teaches the model to refuse instead of hallucinating. The passage text is shortened here for display.</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <figure class="plate" style="margin:0">
+      <h3>Dataset at a glance</h3>
+      <svg viewBox="0 0 460 210" role="img" aria-label="Bar chart of passages per document type" id="kinds"></svg>
+      <figcaption>663 unique passages pulled out with templates (paragraphs with duplicate IDs are dropped as ambiguous). 85% go to training (1,583 examples, 313 of them refusals). 15% are held out (304 eval questions, 24 of them about IDs that don't exist).</figcaption>
+    </figure>
+    <figure class="plate" style="margin:0">
+      <h3>Loss on the answer only</h3>
+      <div class="tokens" aria-label="Token strip: prompt tokens greyed out, answer tokens highlighted">
+        <span>&lt;|im_start|&gt;system</span><span>You</span><span>are</span><span>a</span><span>company</span><span class="gap">…</span><span>&lt;|im_start|&gt;user</span><span>Context</span><span>:</span><span>[1]</span><span>At</span><span>Alder</span><span class="gap">… 360 tokens …</span><span>Question</span><span>:</span><span>Who</span><span>last</span><span>revised</span><span>POL-6957</span><span>?</span><span>&lt;|im_start|&gt;assistant</span><span class="t">Lena</span><span class="t"> Fis</span><span class="t">cher</span><span class="t">&lt;|im_end|&gt;</span><span class="t">\n</span>
+      </div>
+      <figcaption>The prompt tokens get label <code>-100</code>, which the loss ignores. In the first example only <b>5 of 373 tokens</b> are trained. The model learns to answer, not to repeat the documents. This happens in <code>load_train_dataset()</code> in <code>common.py</code>.</figcaption>
+    </figure>
+  </div>
+
+  <div class="callout col">
+    <p><b>Why evaluate on held-out passages?</b> The 99 eval passages are in the RAG index but were never in a training example. If the fine-tuned model answers them better, it has learned the <i>reading skill</i>, not memorized facts. That's the property that survives when your documents change.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="steps">
+  <header class="col">
+    <div class="eyebrow">7 · Hands-on</div>
+    <h2>Step-by-step code</h2>
+    <p class="muted">All code is in the <code>finetuning/</code> folder. Every script imports <code>common.py</code>, so training and inference use the same prompt.</p>
+  </header>
+
+  <div class="pipeline">
+    <a href="#s1"><span class="n">STEP 1</span><b>Build dataset</b><span>docs → RAFT examples</span><code>01_build_dataset.py</code></a>
+    <a href="#s2"><span class="n">STEP 2</span><b>LoRA</b><span>16-bit base + adapter</span><code>02_lora_finetune.py</code></a>
+    <a href="#s3"><span class="n">STEP 3</span><b>QLoRA</b><span>4-bit base + adapter</span><code>03_qlora_finetune.py</code></a>
+    <a href="#s4"><span class="n">STEP 4</span><b>Unsloth</b><span>fast QLoRA + GGUF</span><code>04_unsloth_finetune.py</code></a>
+    <a href="#s5"><span class="n">STEP 5</span><b>RAG compare</b><span>base vs adapters</span><code>05_rag_compare.py</code></a>
+    <a href="#s6"><span class="n">STEP 6</span><b>Size report</b><span>MB, params, VRAM</span><code>06_size_report.py</code></a>
+  </div>
+
+  <div class="plate" id="s0">
+    <div class="codehead"><h3>Folder layout</h3></div>
+<pre><code>finetuning/
+├── docs/                    <span class="c"># same 18 RAG documents (.txt + .pdf)</span>
+├── common.py                <span class="c"># fact templates, TF-IDF retriever, prompt, masking, model loading</span>
+├── 01_build_dataset.py      <span class="c"># → data/train.jsonl, eval.jsonl, passages.json</span>
+├── 02_lora_finetune.py      <span class="c"># → outputs/lora-r16/   (also --variant dora | rslora)</span>
+├── 03_qlora_finetune.py     <span class="c"># → outputs/qlora-r16/</span>
+├── 04_unsloth_finetune.py   <span class="c"># → outputs/unsloth-r16/ (+ GGUF for Ollama)</span>
+├── 05_rag_compare.py        <span class="c"># → outputs/compare.json</span>
+├── 06_size_report.py        <span class="c"># → outputs/size_report.json</span>
+├── requirements.txt
+└── docs.html                <span class="c"># this guide</span></code></pre>
+  </div>
+
+  <div class="plate" id="s1">
+    <div class="codehead"><h3>Step 1 · Build the RAFT dataset</h3><code>python 01_build_dataset.py</code></div>
+    <p class="small muted">A regex template per document type extracts each passage and generates questions with known answers. No LLM is needed, so the dataset is reproducible and the answers are guaranteed correct.</p>
+<pre><code><span class="k">def</span> example(question, answer, fact):
+    pool = [p <span class="k">for</span> p <span class="k">in</span> distractors[fact[<span class="s">"kind"</span>]] <span class="k">if</span> p != fact[<span class="s">"passage"</span>]]
+    <span class="k">if</span> random.random() &lt; args.negatives:              <span class="c"># 20%: golden passage hidden</span>
+        context, answer = random.sample(pool, TOP_K), IDK
+    <span class="k">else</span>:
+        context = random.sample(pool, TOP_K - <span class="s">1</span>) + [fact[<span class="s">"passage"</span>]]
+        random.shuffle(context)                             <span class="c"># answer can sit at any rank</span>
+    <span class="k">return</span> {<span class="s">"prompt"</span>: build_messages(question, context),
+            <span class="s">"completion"</span>: [{<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: answer}]}</code></pre>
+<pre><code>Passages: 663 (564 train / 99 eval)
+Train examples: 1583  (refusals: 313)
+Eval questions: 304  by kind: {'hr_policy': 93, 'faq': 60, 'product_manual': 52, 'research': 39, 'incident': 36, 'unanswerable': 24}</code></pre>
+  </div>
+
+  <div class="plate" id="s2">
+    <div class="codehead"><h3>Step 2 · LoRA</h3><code>python 02_lora_finetune.py [--variant dora|rslora] [--rank 16] [--batch-size 1]</code></div>
+<pre><code>model = AutoModelForCausalLM.from_pretrained(args.model, dtype=compute_dtype(), device_map=<span class="s">"auto"</span>)
+
+lora = LoraConfig(
+    r=args.rank, lora_alpha=<span class="s">2</span> * args.rank, lora_dropout=<span class="s">0.05</span>,
+    target_modules=<span class="s">"all-linear"</span>, task_type=<span class="s">"CAUSAL_LM"</span>,
+    use_dora=args.variant == <span class="s">"dora"</span>,       <span class="c"># advanced variant 1</span>
+    use_rslora=args.variant == <span class="s">"rslora"</span>,   <span class="c"># advanced variant 2</span>
+)
+model = get_peft_model(model, lora)
+count_params(model)   <span class="c"># Trainable params: 8,798,208 of 502,830,976 (1.75%)</span>
+
+trainer = Trainer(model=model, args=training_args(out_dir, args.max_steps),
+                  train_dataset=load_train_dataset(tok), data_collator=make_collator(tok))
+trainer.train()
+trainer.save_model(out_dir)   <span class="c"># writes ONLY adapter_model.safetensors + config</span></code></pre>
+    <details>
+      <summary>How the answer-only masking works (<code>common.load_train_dataset</code>)</summary>
+      <div>
+<pre><code><span class="k">def</span> encode(row):
+    prompt = tok.apply_chat_template(row[<span class="s">"prompt"</span>], tokenize=<span class="k">False</span>, add_generation_prompt=<span class="k">True</span>)
+    full = tok.apply_chat_template(row[<span class="s">"prompt"</span>] + row[<span class="s">"completion"</span>], tokenize=<span class="k">False</span>)
+    prompt_ids = tok(prompt, add_special_tokens=<span class="k">False</span>)[<span class="s">"input_ids"</span>]
+    answer_ids = tok(full[len(prompt):], add_special_tokens=<span class="k">False</span>)[<span class="s">"input_ids"</span>]
+    <span class="k">return</span> {<span class="s">"input_ids"</span>: prompt_ids + answer_ids,
+            <span class="s">"labels"</span>:    [-<span class="s">100</span>] * len(prompt_ids) + answer_ids}   <span class="c"># -100 = ignored by the loss</span></code></pre>
+        <p class="small muted">We use the plain <code>transformers.Trainer</code> here instead of TRL's <code>SFTTrainer</code>. The masking stays visible to participants, and recent TRL releases need Triton GPU kernels, which can't train on CPU and need an extra install on Windows.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="plate" id="s3">
+    <div class="codehead"><h3>Step 3 · QLoRA</h3><code>python 03_qlora_finetune.py [--model Qwen/Qwen2.5-1.5B-Instruct]</code></div>
+<pre><code>bnb = BitsAndBytesConfig(
+    load_in_4bit=<span class="k">True</span>,
+    bnb_4bit_quant_type=<span class="s">"nf4"</span>,             <span class="c"># idea 1: NormalFloat-4</span>
+    bnb_4bit_use_double_quant=<span class="k">True</span>,        <span class="c"># idea 2: quantize the scales too</span>
+    bnb_4bit_compute_dtype=compute_dtype(), <span class="c"># matmuls in bf16 / fp16</span>
+)
+model = AutoModelForCausalLM.from_pretrained(args.model, quantization_config=bnb, device_map={<span class="s">""</span>: <span class="s">0</span>})
+model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=<span class="k">True</span>)
+model = get_peft_model(model, LoraConfig(r=<span class="s">16</span>, lora_alpha=<span class="s">32</span>, target_modules=<span class="s">"all-linear"</span>, task_type=<span class="s">"CAUSAL_LM"</span>))
+
+args = training_args(out_dir, max_steps, optim=<span class="s">"paged_adamw_8bit"</span>)   <span class="c"># idea 3: paged optimizer</span></code></pre>
+  </div>
+
+  <div class="plate" id="s4">
+    <div class="codehead"><h3>Step 4 · Unsloth (advanced)</h3><code>python 04_unsloth_finetune.py --gguf</code></div>
+<pre><code><span class="k">from</span> unsloth <span class="k">import</span> FastLanguageModel     <span class="c"># import first: it patches transformers</span>
+
+model, tok = FastLanguageModel.from_pretrained(model_name=args.model, max_seq_length=<span class="s">1024</span>, load_in_4bit=<span class="k">True</span>)
+model = FastLanguageModel.get_peft_model(
+    model, r=<span class="s">16</span>, lora_alpha=<span class="s">32</span>, lora_dropout=<span class="s">0</span>,
+    target_modules=[<span class="s">"q_proj"</span>, <span class="s">"k_proj"</span>, <span class="s">"v_proj"</span>, <span class="s">"o_proj"</span>, <span class="s">"gate_proj"</span>, <span class="s">"up_proj"</span>, <span class="s">"down_proj"</span>],
+    use_gradient_checkpointing=<span class="s">"unsloth"</span>,  <span class="c"># offloads activations to CPU RAM</span>
+)
+<span class="c"># ... same Trainer as steps 2-3 ...</span>
+model.save_pretrained_gguf(gguf_dir, tok, quantization_method=<span class="s">"q4_k_m"</span>)   <span class="c"># merged + quantized for Ollama</span></code></pre>
+<pre><code>ollama create rag-qwen -f outputs/unsloth-r16-gguf/Modelfile
+<span class="c"># then in rag/offline/rag.py set LLM_MODEL = "rag-qwen" to use the fine-tuned model in the original RAG app</span></code></pre>
+  </div>
+
+  <div class="plate" id="s5">
+    <div class="codehead"><h3>Step 5 · RAG with and without fine-tuning</h3><code>python 05_rag_compare.py --n 80</code></div>
+<pre><code>retriever = Retriever(load_passages())                 <span class="c"># TF-IDF; same top-3 for every model</span>
+contexts = [retriever.search(r[<span class="s">"question"</span>]) <span class="k">for</span> r <span class="k">in</span> rows]
+<span class="k">for</span> name, adapter <span class="k">in</span> [(<span class="s">"base"</span>, <span class="k">None</span>)] + adapters:
+    model, tok = load_for_inference(adapter)           <span class="c"># base, or base + PeftModel adapter</span>
+    preds = [generate(model, tok, build_messages(r[<span class="s">"question"</span>], c)) <span class="k">for</span> r, c <span class="k">in</span> zip(rows, contexts)]
+    ok = [is_correct(p, r[<span class="s">"key"</span>]) <span class="k">for</span> p, r <span class="k">in</span> zip(preds, rows)]</code></pre>
+<pre><code>python 05_rag_compare.py --ask "Who last revised policy POL-8361?"
+Retrieved passages:
+  [1] At Alder &amp; Finch, the remote work policy was last revised on 2 November 2026 by Sara Haddad...
+          base: ...
+      lora-r16: ...</code></pre>
+  </div>
+
+  <div class="plate" id="s6">
+    <div class="codehead"><h3>Step 6 · Size report</h3><code>python 06_size_report.py</code></div>
+<pre><code><span class="k">def</span> lora_params(a, r):
+    <span class="s">"""A LoRA pair on a d_in x d_out layer adds r * (d_in + d_out) parameters."""</span>
+    h, m, kv = a[<span class="s">"hidden"</span>], a[<span class="s">"mlp"</span>], a[<span class="s">"kv"</span>]
+    per_layer = (h + h) + (h + kv) * <span class="s">2</span> + (h + h) + (h + m) * <span class="s">2</span> + (m + h)   <span class="c"># q, k, v, o, gate, up, down</span>
+    <span class="k">return</span> a[<span class="s">"layers"</span>] * r * per_layer</code></pre>
+  </div>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="size">
+  <header class="col">
+    <div class="eyebrow">8 · The numbers</div>
+    <h2>Size comparison: base model vs fine-tuned adapter</h2>
+  </header>
+  <p class="col">You don't ship a new copy of the model, only the adapter. The charts use a <b>log scale</b>, because the differences span three orders of magnitude. Every gridline is 10× the previous one.</p>
+
+  <figure class="plate" style="margin:0">
+    <h3>What is stored on disk</h3>
+    <div class="legend">
+      <span><i style="background:var(--s1)"></i>Base model, 16-bit</span>
+      <span><i style="background:var(--s3)"></i>Base model, 4-bit NF4</span>
+      <span><i style="background:var(--s2)"></i>LoRA adapter r=16 (16-bit)</span>
+    </div>
+    <div class="scroll"><svg id="chart-disk" viewBox="0 0 960 330" role="img" aria-label="Disk size of base models and LoRA adapters, log scale"></svg></div>
+    <figcaption>A 70B model is 141 GB; its LoRA adapter is 414 MB, 0.29% of the size. PEFT saves adapters in fp32 by default, so the file you see on disk is about 2× the 16-bit figure (≈35 MB for our 0.5B model). Merging the adapter back into the base (<code>merge_and_unload()</code>) produces a full-size model again.</figcaption>
+  </figure>
+
+  <figure class="plate" style="margin:0">
+    <h3>GPU memory needed to train</h3>
+    <div class="legend">
+      <span><i style="background:var(--s1)"></i>Full fine-tuning</span>
+      <span><i style="background:var(--s2)"></i>LoRA</span>
+      <span><i style="background:var(--s3)"></i>QLoRA</span>
+      <span><i style="background:none;border:1px dashed var(--fg-3)"></i>GPU memory size</span>
+    </div>
+    <div class="scroll"><svg id="chart-vram" viewBox="0 0 960 360" role="img" aria-label="Training GPU memory for full fine-tuning, LoRA and QLoRA on three model sizes, log scale, with GPU size markers"></svg></div>
+    <figcaption>Weights + gradients + optimizer states, excluding activations (add 1–4 GB depending on batch size and sequence length). Dashed lines mark common GPUs. QLoRA brings an 8B model within reach of a 16 GB T4 (free on Colab) and a 70B model onto one 48–80 GB card. Full fine-tuning of 70B needs a multi-node cluster.</figcaption>
+  </figure>
+
+  <div class="plate">
+    <h3>The same data as a table</h3>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Model</th><th class="r">Params</th><th class="r">16-bit file</th><th class="r">4-bit</th><th class="r">Adapter r=16</th><th class="r">Adapter %</th><th class="r">Train: full</th><th class="r">LoRA</th><th class="r">QLoRA</th></tr></thead>
+      <tbody id="size-table"></tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="results">
+  <header class="col">
+    <div class="eyebrow">9 · Measured in this lab</div>
+    <h2>Results</h2>
+  </header>
+  <div id="results-body" class="grid2"></div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="deploy">
+  <header class="col">
+    <div class="eyebrow">10 · After training</div>
+    <h2>Deploying adapters</h2>
+  </header>
+  <figure class="plate" style="margin:0">
+    <div class="scroll">
+    <svg viewBox="0 0 1000 250" role="img" aria-label="Deployment options: keep adapters separate and hot-swap on one base model, or merge and export to GGUF for Ollama">
+      <text x="20" y="30" font-size="15" font-weight="600">Option A · keep adapters separate (multi-LoRA serving)</text>
+      <rect x="20" y="95" width="200" height="90" rx="8" style="fill:var(--frozen-fill);stroke:var(--frozen)"/>
+      <text x="120" y="135" font-size="15" font-weight="600" text-anchor="middle">Base model</text>
+      <text x="120" y="157" font-size="12" text-anchor="middle" class="t2">loaded once · 988 MB</text>
+      <g font-size="13">
+        <rect x="290" y="50" width="170" height="36" rx="6" style="fill:var(--train-soft);stroke:var(--train)"/><text x="375" y="73" text-anchor="middle">HR-policy adapter · 35 MB</text>
+        <rect x="290" y="104" width="170" height="36" rx="6" style="fill:var(--train-soft);stroke:var(--train)"/><text x="375" y="127" text-anchor="middle">Support adapter · 35 MB</text>
+        <rect x="290" y="158" width="170" height="36" rx="6" style="fill:var(--train-soft);stroke:var(--train)"/><text x="375" y="181" text-anchor="middle">Incident adapter · 35 MB</text>
+      </g>
+      <line x1="222" y1="140" x2="286" y2="68" style="stroke:var(--fg-3)"/><line x1="222" y1="140" x2="286" y2="122" style="stroke:var(--fg-3)"/><line x1="222" y1="140" x2="286" y2="176" style="stroke:var(--fg-3)"/>
+      <text x="20" y="225" font-size="12" class="t2">vLLM / LoRAX choose the adapter per request.</text>
+      <line x1="510" y1="20" x2="510" y2="235" style="stroke:var(--line)"/>
+      <text x="540" y="30" font-size="15" font-weight="600">Option B · merge and export</text>
+      <g font-size="13">
+        <rect x="540" y="95" width="120" height="70" rx="8" style="fill:var(--sunk);stroke:var(--line)"/><text x="600" y="126" text-anchor="middle">base + adapter</text><text x="600" y="146" text-anchor="middle" class="t2 mono">merge_and_unload</text>
+        <line x1="662" y1="130" x2="700" y2="130" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+        <rect x="706" y="95" width="120" height="70" rx="8" style="fill:var(--sunk);stroke:var(--line)"/><text x="766" y="126" text-anchor="middle">GGUF q4_k_m</text><text x="766" y="146" text-anchor="middle" class="t2">~400 MB</text>
+        <line x1="828" y1="130" x2="866" y2="130" style="stroke:var(--fg-3);stroke-width:1.5" marker-end="url(#arr)"/>
+        <rect x="872" y="95" width="110" height="70" rx="8" style="fill:var(--good-soft);stroke:var(--good)"/><text x="927" y="126" text-anchor="middle">Ollama</text><text x="927" y="146" text-anchor="middle" class="t2 mono">rag-qwen</text>
+      </g>
+      <text x="540" y="225" font-size="12" class="t2">One file, zero adapter overhead; plugs into rag/offline/rag.py.</text>
+    </svg>
+    </div>
+  </figure>
+<pre><code><span class="c"># Option A in Python: load the base once, attach an adapter</span>
+<span class="k">from</span> peft <span class="k">import</span> PeftModel
+model = PeftModel.from_pretrained(base_model, <span class="s">"outputs/lora-r16"</span>)
+
+<span class="c"># Option B: bake the adapter into the weights</span>
+merged = model.merge_and_unload()
+merged.save_pretrained(<span class="s">"outputs/merged"</span>)   <span class="c"># full size again: ~988 MB</span></code></pre>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="setup">
+  <header class="col">
+    <div class="eyebrow">11 · Running it</div>
+    <h2>Setup and exercises</h2>
+  </header>
+  <div class="grid2">
+    <div class="plate">
+      <h3>Install</h3>
+<pre><code>cd finetuning
+<span class="c"># 1. PyTorch matching your CUDA (or CPU build)</span>
+pip install torch --index-url https://download.pytorch.org/whl/cu124
+<span class="c"># 2. Everything else</span>
+pip install -r requirements.txt
+<span class="c"># 3. Optional, Linux / WSL / Colab</span>
+pip install unsloth
+
+python 01_build_dataset.py
+python 02_lora_finetune.py
+python 03_qlora_finetune.py
+python 05_rag_compare.py
+python 06_size_report.py</code></pre>
+    </div>
+    <div class="plate">
+      <h3>Hardware guide</h3>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>Machine</th><th>Steps 2 · 3 · 4</th><th>Tip</th></tr></thead>
+        <tbody>
+          <tr><td>CPU only</td><td><span class="pill yes">2</span></td><td><code>--max-steps 40 --batch-size 1</code>; ~2–3 hours on a laptop</td></tr>
+          <tr><td>4 GB GPU (GTX 1650)</td><td><span class="pill yes">2</span> <span class="pill yes">3</span></td><td>fp16 (no bf16 before Ampere); <code>--batch-size 1</code></td></tr>
+          <tr><td>Colab T4 16 GB</td><td><span class="pill yes">2</span> <span class="pill yes">3</span> <span class="pill yes">4</span></td><td>Default settings; try <code>--model Qwen/Qwen2.5-1.5B-Instruct</code></td></tr>
+          <tr><td>24 GB+ (RTX 4090, A10, L4)</td><td><span class="pill yes">2</span> <span class="pill yes">3</span> <span class="pill yes">4</span></td><td>QLoRA on 7–8B models</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small muted">Windows: bitsandbytes ≥ 0.43 works natively. Unsloth needs <code>triton-windows</code>, or use WSL. Old NVIDIA drivers (CUDA 11.2) need an update for current PyTorch builds.</p>
+    </div>
+  </div>
+
+  <div class="plate">
+    <h3>Exercises for participants</h3>
+    <ol class="tight">
+      <li><b>Baseline first.</b> Run <code>05_rag_compare.py</code> before any training. Write down base accuracy and refusal rate.</li>
+      <li><b>Rank sweep.</b> Train <code>--rank 4</code>, <code>16</code> and <code>64</code>. Compare adapter size (step 6) against accuracy (step 5). Where does the gain stop?</li>
+      <li><b>LoRA vs DoRA vs rsLoRA.</b> Same steps, same rank. Which converges to a lower <code>final_loss</code> in <code>metrics.json</code>?</li>
+      <li><b>LoRA vs QLoRA.</b> Compare <code>peak_gpu_mb</code> and <code>train_runtime_s</code> in <code>metrics.json</code>. Is the accuracy difference larger than run-to-run noise?</li>
+      <li><b>Refusals.</b> Rebuild the dataset with <code>--negatives 0</code> and retrain. What happens to the "refuses" column?</li>
+      <li><b>Bigger model, same GPU.</b> QLoRA with <code>--model Qwen/Qwen2.5-1.5B-Instruct</code>. Does 3× the parameters beat a fine-tuned 0.5B?</li>
+      <li><b>Bring it home.</b> Export with <code>04_unsloth_finetune.py --gguf</code> and run the original <code>rag/offline/rag.py</code> with <code>LLM_MODEL = "rag-qwen"</code>.</li>
+    </ol>
+  </div>
+</section>
+
+</div>
+<div id="tip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function fmtBytes(mb) {
+    if (mb >= 1000) return (mb / 1000).toFixed(mb >= 10000 ? 0 : 1) + " GB";
+    if (mb >= 10) return Math.round(mb) + " MB";
+    return mb.toFixed(1) + " MB";
+  }
+  function fmtGB(gb) { return gb >= 100 ? Math.round(gb).toLocaleString() + " GB" : gb >= 10 ? gb.toFixed(0) + " GB" : gb.toFixed(1) + " GB"; }
+
+  /* ---------- tooltip ---------- */
+  var tip = document.getElementById("tip");
+  function bindTip(node, text) {
+    node.addEventListener("mousemove", function (e) {
+      tip.textContent = text; tip.hidden = false;
+      var x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+      tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px";
+    });
+    node.addEventListener("mouseleave", function () { tip.hidden = true; });
+  }
+
+  /* ---------- model data (same numbers as 06_size_report.py) ---------- */
+  var NF4 = 4.127 / 8;
+  var ARCH = [
+    { name: "Qwen2.5-0.5B", hidden: 896, mlp: 4864, layers: 24, kv: 128, params: 0.494e9, embed: 151936 * 896 },
+    { name: "Llama-3.1-8B", hidden: 4096, mlp: 14336, layers: 32, kv: 1024, params: 8.03e9, embed: 2 * 128256 * 4096 },
+    { name: "Llama-3.1-70B", hidden: 8192, mlp: 28672, layers: 80, kv: 1024, params: 70.6e9, embed: 2 * 128256 * 8192 }
+  ];
+  function loraParams(a, r) {
+    var h = a.hidden, m = a.mlp, kv = a.kv;
+    return a.layers * r * ((h + h) + (h + kv) * 2 + (h + h) + (h + m) * 2 + (m + h));
+  }
+  var rows = ARCH.map(function (a) {
+    var A = loraParams(a, 16), P = a.params;
+    var w4 = (P - a.embed) * NF4 + a.embed * 2;
+    return { name: a.name, P: P, A: A, base16: P * 2 / 1e6, base4: w4 / 1e6, adapter: A * 2 / 1e6,
+             full: P * 16 / 1e9, lora: (P * 2 + A * 16) / 1e9, qlora: (w4 + A * 16) / 1e9 };
+  });
+
+  /* ---------- section 2: bytes per parameter ---------- */
+  (function () {
+    var host = document.getElementById("membar");
+    var data = [
+      { label: "Full fine-tune", parts: [[2, "--s1", "W 2"], [2, "--s3", "grad 2"], [4, "--frozen", "master 4"], [8, "--s2", "Adam 8"]], total: "16 B" },
+      { label: "LoRA", parts: [[2, "--s1", "W 2"], [0.28, "--s2", ""]], total: "~2.3 B" },
+      { label: "QLoRA", parts: [[0.56, "--s1", "W ½"], [0.28, "--s2", ""]], total: "~0.8 B" }
+    ];
+    data.forEach(function (d) {
+      var row = document.createElement("div"); row.className = "row";
+      var l = document.createElement("span"); l.textContent = d.label; row.appendChild(l);
+      var bar = document.createElement("div"); bar.className = "bar";
+      d.parts.forEach(function (p) {
+        var i = document.createElement("i");
+        i.style.width = (p[0] / 16 * 100) + "%"; i.style.background = "var(" + p[1] + ")";
+        i.textContent = p[2]; bar.appendChild(i);
+      });
+      row.appendChild(bar);
+      var t = document.createElement("b"); t.className = "num"; t.textContent = d.total; row.appendChild(t);
+      host.appendChild(row);
+    });
+    var note = document.createElement("p"); note.className = "small muted";
+    note.textContent = "LoRA/QLoRA: the orange sliver is gradients + Adam state for the ~1.8% adapter parameters (1.8% × 16 B ≈ 0.28 B per base parameter).";
+    host.appendChild(note);
+  })();
+
+  /* ---------- LoRA calculator ---------- */
+  (function () {
+    var ranks = [4, 8, 16, 32, 64, 128, 256, 512];
+    var sel = document.getElementById("calc-model"), rng = document.getElementById("calc-rank");
+    function upd() {
+      var a = ARCH[+sel.value], r = ranks[+rng.value], A = loraParams(a, r);
+      document.getElementById("calc-rank-v").textContent = r;
+      document.getElementById("o-params").textContent = (A / 1e6).toFixed(A < 1e7 ? 2 : 1) + " M";
+      document.getElementById("o-pct").textContent = (100 * A / a.params).toFixed(2) + "%";
+      document.getElementById("o-mb").textContent = fmtBytes(A * 2 / 1e6);
+      document.getElementById("o-base").textContent = fmtBytes(a.params * 2 / 1e6);
+      document.getElementById("o-ratio").textContent = Math.round(a.params / A).toLocaleString() + "×";
+      document.getElementById("o-opt").textContent = fmtBytes(A * 14 / 1e6);
+    }
+    sel.addEventListener("change", upd); rng.addEventListener("input", upd); upd();
+  })();
+
+  /* ---------- NF4 diagram ---------- */
+  (function () {
+    var g = document.getElementById("nf4");
+    var L = [-1, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0911, 0, 0.0796, 0.1609, 0.2461, 0.3379, 0.4407, 0.5626, 0.7230, 1];
+    var x0 = 30, x1 = 430, base = 165, hgt = 125;
+    function X(v) { return x0 + (v + 1) / 2 * (x1 - x0); }
+    var d = "";
+    for (var i = 0; i <= 100; i++) {
+      var v = -1 + i / 50, y = base - hgt * Math.exp(-(v * v) / (2 * 0.3 * 0.3));
+      d += (i ? "L" : "M") + X(v).toFixed(1) + "," + y.toFixed(1);
+    }
+    el("path", { d: d + "L" + x1 + "," + base + "L" + x0 + "," + base + "Z", style: "fill:var(--accent-soft);stroke:none" }, g);
+    el("path", { d: d, style: "fill:none;stroke:var(--accent);stroke-width:2" }, g);
+    el("line", { x1: x0, y1: base, x2: x1, y2: base, style: "stroke:var(--fg-3)" }, g);
+    L.forEach(function (v) {
+      var t = el("line", { x1: X(v), y1: base - 6, x2: X(v), y2: base + 14, style: "stroke:var(--train);stroke-width:2.5;stroke-linecap:round" }, g);
+      bindTip(t, "NF4 level " + v);
+    });
+    el("text", { x: x0, y: base + 34, "font-size": 12, "class": "t3" }, g, "−1");
+    el("text", { x: X(0), y: base + 34, "font-size": 12, "class": "t3", "text-anchor": "middle" }, g, "0");
+    el("text", { x: x1, y: base + 34, "font-size": 12, "class": "t3", "text-anchor": "end" }, g, "+1");
+    el("text", { x: x0, y: 22, "font-size": 12, "class": "t2" }, g, "weight distribution (normalized per 64-weight block)");
+    el("text", { x: x1, y: 22, "font-size": 12, "text-anchor": "end", style: "fill:var(--train)" }, g, "| 16 NF4 levels");
+    el("text", { x: X(0), y: 222, "font-size": 12, "class": "t3", "text-anchor": "middle" }, g, "levels crowd where the weights are");
+  })();
+
+  /* ---------- dataset bar chart ---------- */
+  (function () {
+    var svg = document.getElementById("kinds");
+    var data = [["HR policies", 198], ["Product manuals", 171], ["Lab notebooks", 142], ["Support FAQs", 107], ["Incident reports", 45]];
+    var x0 = 130, x1 = 410, max = 200;
+    data.forEach(function (d, i) {
+      var y = 18 + i * 36, w = (x1 - x0) * d[1] / max;
+      el("text", { x: x0 - 10, y: y + 17, "font-size": 13, "text-anchor": "end", "class": "t2" }, svg, d[0]);
+      var r = el("rect", { x: x0, y: y + 2, width: w, height: 22, rx: 4, style: "fill:var(--s1)" }, svg);
+      bindTip(r, d[0] + ": " + d[1] + " passages, about " + d[1] * 3 + " questions");
+      el("text", { x: x0 + w + 6, y: y + 18, "font-size": 13, "class": "num" }, svg, d[1]);
+    });
+  })();
+
+  /* ---------- log-scale grouped bar chart ---------- */
+  function logBars(svg, groups, series, opts) {
+    var W = 960, left = 140, right = 30, top = 20, rowH = opts.rowH, barH = opts.barH;
+    var lo = opts.lo, hi = opts.hi;
+    function X(v) { return left + (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * (W - left - right); }
+    var plotH = groups.length * rowH, axisY = top + plotH + 6;
+    for (var p = Math.log10(lo); p <= Math.log10(hi) + 1e-9; p++) {
+      var v = Math.pow(10, p), x = X(v);
+      el("line", { x1: x, y1: top - 6, x2: x, y2: axisY, style: "stroke:var(--line)" }, svg);
+      el("text", { x: x, y: axisY + 18, "font-size": 12, "text-anchor": "middle", "class": "t3 num" }, svg, opts.tick(v));
+    }
+    (opts.marks || []).forEach(function (m) {
+      var x = X(m[0]);
+      el("line", { x1: x, y1: top - 6, x2: x, y2: axisY, style: "stroke:var(--fg-3);stroke-dasharray:4 4" }, svg);
+      el("text", { x: x + 4, y: axisY + 36, "font-size": 11, "class": "t2" }, svg, m[1]);
+    });
+    groups.forEach(function (g, gi) {
+      var gy = top + gi * rowH;
+      el("text", { x: left - 12, y: gy + rowH / 2, "font-size": 14, "font-weight": 600, "text-anchor": "end", "dominant-baseline": "middle" }, svg, g.name);
+      series.forEach(function (s, si) {
+        var y = gy + 8 + si * (barH + 2), val = g[s.key], x = X(val);
+        var r = el("rect", { x: left, y: y, width: Math.max(2, x - left), height: barH, rx: 3, style: "fill:var(" + s.color + ")" }, svg);
+        bindTip(r, g.name + " · " + s.label + ": " + opts.fmt(val));
+        el("text", { x: x + 6, y: y + barH / 2, "font-size": 12, "dominant-baseline": "middle", "class": "num t2" }, svg, opts.fmt(val));
+      });
+    });
+  }
+  logBars(document.getElementById("chart-disk"), rows,
+    [{ key: "base16", label: "16-bit base", color: "--s1" }, { key: "base4", label: "4-bit base", color: "--s3" }, { key: "adapter", label: "LoRA adapter", color: "--s2" }],
+    { lo: 10, hi: 1e6, rowH: 88, barH: 22, fmt: fmtBytes, tick: function (v) { return v >= 1000 ? (v / 1000) + " GB" : v + " MB"; } });
+  logBars(document.getElementById("chart-vram"), rows,
+    [{ key: "full", label: "full fine-tune", color: "--s1" }, { key: "lora", label: "LoRA", color: "--s2" }, { key: "qlora", label: "QLoRA", color: "--s3" }],
+    { lo: 0.1, hi: 10000, rowH: 92, barH: 24, fmt: fmtGB, tick: function (v) { return v < 1 ? v + " GB" : v.toLocaleString() + " GB"; },
+      marks: [[4, "4 GB GTX 1650"], [16, "16 GB T4"], [80, "80 GB A100/H100"], [640, "8×80 GB node"]] });
+
+  /* ---------- size table ---------- */
+  var tb = document.getElementById("size-table");
+  rows.forEach(function (r) {
+    var tr = document.createElement("tr");
+    [r.name, (r.P / 1e9).toFixed(r.P < 1e9 ? 3 : 1) + " B", fmtBytes(r.base16), fmtBytes(r.base4), fmtBytes(r.adapter),
+     (100 * r.A / r.P).toFixed(2) + "%", fmtGB(r.full), fmtGB(r.lora), fmtGB(r.qlora)].forEach(function (c, i) {
+      var td = document.createElement("td"); td.textContent = c; if (i) td.className = "r"; tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+
+  /* ---------- measured results (filled from outputs/*.json after the lab run) ---------- */
+  var RESULTS = null;
+  var host = document.getElementById("results-body");
+  function plate(title, wide) {
+    var d = document.createElement("div"); d.className = "plate";
+    if (wide) d.style.gridColumn = "1 / -1";
+    var h = document.createElement("h3"); h.textContent = title; d.appendChild(h);
+    host.appendChild(d); return d;
+  }
+  function note(parent, text) {
+    var p = document.createElement("p"); p.className = "caption"; p.textContent = text; parent.appendChild(p);
+  }
+  if (!RESULTS) {
+    var p0 = plate("No results yet");
+    note(p0, "Run steps 2, 5 and 6; outputs/compare.json, outputs/size_report.json and outputs/*/metrics.json hold the numbers.");
+    return;
+  }
+  var R = RESULTS;
+
+  /* accuracy: grouped bars, linear 0-100% */
+  (function () {
+    var pl = plate("RAG accuracy on held-out questions");
+    var lg = document.createElement("div"); lg.className = "legend";
+    lg.innerHTML = '<span><i style="background:var(--frozen)"></i>Base model</span><span><i style="background:var(--s2)"></i>Fine-tuned (LoRA)</span>';
+    pl.appendChild(lg);
+    var svg = el("svg", { viewBox: "0 0 460 250", role: "img", "aria-label": "Accuracy of base vs fine-tuned model" }, pl);
+    var metrics = [["accuracy", "Overall"], ["answerable_acc", "Answerable"], ["refusal_acc", "Refuses when absent"]];
+    var names = Object.keys(R.compare), colors = { "Base model": "--frozen" };
+    var x0 = 40, x1 = 450, y0 = 200, y1 = 20;
+    function Y(v) { return y0 - (y0 - y1) * v / 100; }
+    [0, 25, 50, 75, 100].forEach(function (t) {
+      el("line", { x1: x0, y1: Y(t), x2: x1, y2: Y(t), style: "stroke:var(--line)" }, svg);
+      el("text", { x: x0 - 6, y: Y(t) + 4, "font-size": 11, "text-anchor": "end", "class": "t3 num" }, svg, t + "%");
+    });
+    var gw = (x1 - x0) / metrics.length, bw = 44;
+    metrics.forEach(function (m, mi) {
+      var cx = x0 + gw * mi + gw / 2;
+      names.forEach(function (n, ni) {
+        var v = R.compare[n][m[0]], x = cx - (names.length * (bw + 2)) / 2 + ni * (bw + 2);
+        var r = el("rect", { x: x, y: Y(v), width: bw, height: Math.max(2, y0 - Y(v)), rx: 3, style: "fill:var(" + (colors[n] || "--s2") + ")" }, svg);
+        bindTip(r, n + " · " + m[1] + ": " + v + "%");
+        el("text", { x: x + bw / 2, y: Y(v) - 6, "font-size": 12, "text-anchor": "middle", "class": "num" }, svg, v + "%");
+      });
+      el("text", { x: cx, y: y0 + 20, "font-size": 12, "text-anchor": "middle", "class": "t2" }, svg, m[1]);
+    });
+    el("line", { x1: x0, y1: y0, x2: x1, y2: y0, style: "stroke:var(--fg-3)" }, svg);
+    note(pl, R.note);
+  })();
+
+  /* loss curve + training facts */
+  (function () {
+    var pl = plate("Training run");
+    var loss = R.metrics.loss_curve, svg = el("svg", { viewBox: "0 0 460 170", role: "img", "aria-label": "Training loss curve" }, pl);
+    var x0 = 40, x1 = 440, y0 = 140, y1 = 16, mx = Math.max.apply(null, loss) * 1.1;
+    function X(i) { return x0 + (x1 - x0) * i / Math.max(1, loss.length - 1); }
+    function Y(v) { return y0 - (y0 - y1) * v / mx; }
+    [0, mx / 2].forEach(function (t) { el("line", { x1: x0, y1: Y(t), x2: x1, y2: Y(t), style: "stroke:var(--line)" }, svg); });
+    var d = loss.map(function (v, i) { return (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join("");
+    el("path", { d: d + "L" + X(loss.length - 1) + "," + y0 + "L" + x0 + "," + y0 + "Z", style: "fill:var(--train-soft)" }, svg);
+    el("path", { d: d, style: "fill:none;stroke:var(--train);stroke-width:2" }, svg);
+    loss.forEach(function (v, i) {
+      var c = el("circle", { cx: X(i), cy: Y(v), r: i === loss.length - 1 ? 5 : 3.5, style: "fill:var(--train);stroke:var(--surface);stroke-width:2" }, svg);
+      bindTip(c, "step " + (i + 1) * R.metrics.log_every + ": loss " + v.toFixed(3));
+    });
+    el("text", { x: x0, y: y0 + 20, "font-size": 11, "class": "t3" }, svg, "step " + R.metrics.log_every);
+    el("text", { x: x1, y: y0 + 20, "font-size": 11, "class": "t3", "text-anchor": "end" }, svg, "step " + loss.length * R.metrics.log_every);
+    el("text", { x: X(0) + 8, y: Y(loss[0]) + 4, "font-size": 12, "class": "num" }, svg, loss[0].toFixed(2));
+    el("text", { x: X(loss.length - 1), y: Y(loss[loss.length - 1]) - 10, "font-size": 12, "text-anchor": "end", "class": "num" }, svg, loss[loss.length - 1].toFixed(2));
+    var t = document.createElement("table");
+    t.innerHTML = "<tbody>" + R.facts.map(function (f) { return "<tr><td>" + f[0] + '</td><td class="r">' + f[1] + "</td></tr>"; }).join("") + "</tbody>";
+    pl.appendChild(t);
+  })();
+
+  /* measured sizes */
+  (function () {
+    var pl = plate("Measured on disk", true);
+    var lg = document.createElement("div"); lg.className = "legend";
+    lg.innerHTML = '<span><i style="background:var(--s1)"></i>Base model</span><span><i style="background:var(--s3)"></i>Base 4-bit (est.)</span><span><i style="background:var(--s2)"></i>Our adapter</span>';
+    pl.appendChild(lg);
+    var max = R.sizes[0][1], wrap = document.createElement("div"); wrap.className = "membar";
+    R.sizes.forEach(function (s, i) {
+      var row = document.createElement("div"); row.className = "row"; row.style.gridTemplateColumns = "minmax(0,220px) 1fr 80px";
+      var l = document.createElement("span"); l.textContent = s[0]; row.appendChild(l);
+      var bar = document.createElement("div"); bar.className = "bar";
+      var b = document.createElement("i"); b.style.width = Math.max(0.6, 100 * s[1] / max) + "%";
+      b.style.background = "var(" + ["--s1", "--s3", "--s2"][Math.min(i, 2)] + ")"; bar.appendChild(b); row.appendChild(bar);
+      var v = document.createElement("b"); v.className = "num"; v.textContent = fmtBytes(s[1]); row.appendChild(v);
+      wrap.appendChild(row);
+    });
+    pl.appendChild(wrap);
+    note(pl, "Linear scale: the adapter bar is drawn to scale against the base model.");
+  })();
+
+  /* sample answers */
+  (function () {
+    var pl = plate("Sample answers (same retrieved passages for both models)", true);
+    var sc = document.createElement("div"); sc.className = "scroll";
+    var t = document.createElement("table"), names = Object.keys(R.compare);
+    var head = "<thead><tr><th>Question</th><th>Expected</th>" + names.map(function (n) { return "<th>" + n + "</th>"; }).join("") + "</tr></thead><tbody>";
+    var body = R.compare[names[0]].samples.map(function (s, i) {
+      return "<tr><td>" + s.q + "</td><td><b>" + s.expected + "</b></td>" + names.map(function (n) {
+        var g = R.compare[n].samples[i].got.replace(/</g, "&lt;");
+        return "<td>" + (g.length > 160 ? g.slice(0, 160) + "…" : g) + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    t.innerHTML = head + body + "</tbody>"; sc.appendChild(t); pl.appendChild(sc);
+  })();
+})();
+</script>
+</body>
+</html>

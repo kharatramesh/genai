@@ -1,0 +1,14 @@
+# Install PyTorch first, matching your CUDA version: https://pytorch.org/get-started/locally/
+#   e.g. pip install torch --index-url https://download.pytorch.org/whl/cu124
+transformers>=4.56   # uses the `dtype=` argument
+peft>=0.15
+datasets
+accelerate
+bitsandbytes>=0.45   # QLoRA 4-bit (NVIDIA GPU; Windows supported since 0.43)
+safetensors
+huggingface_hub
+scikit-learn
+pypdf
+numpy
+# Optional, step 4 only (Linux / WSL / Colab; native Windows also needs triton-windows):
+# unsloth

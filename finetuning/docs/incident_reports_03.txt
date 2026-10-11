@@ -1,0 +1,167 @@
+Operations Incident Review Volume 3
+===================================
+
+Post-mortem 1: INC-78742
+------------------------
+
+Incident INC-78742 occurred on 11 December 2025 at the Quito data center and lasted 157 minutes. Severity was rated SEV-3. The incident commander was Diego Alvarez, supported by the Data Engineering team.
+
+Root cause: a misconfigured queue consumer caused 62% of requests to fail. 32584 customers were affected. The first alert fired 15 minutes after the change was deployed (change ticket CHG-5927).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Rafael Costa will add automated validation by 5 August 2019; Kofi Mensah will update the runbook; estimated cost of the outage was $427,000.
+
+Lessons learned: alert thresholds were set to 14 minutes, which was too slow. We now require a canary phase of 40 minutes before global rollout.
+
+Post-mortem 2: INC-79467
+------------------------
+
+Incident INC-79467 occurred on 5 July 2022 at the Nairobi data center and lasted 213 minutes. Severity was rated SEV-3. The incident commander was Hannah Cole, supported by the Platform team.
+
+Root cause: a misconfigured certificate caused 49% of requests to fail. 13119 customers were affected. The first alert fired 35 minutes after the change was deployed (change ticket CHG-4120).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Aiko Tanaka will add automated validation by 9 July 2019; Marcus Webb will update the runbook; estimated cost of the outage was $197,000.
+
+Lessons learned: alert thresholds were set to 26 minutes, which was too slow. We now require a canary phase of 53 minutes before global rollout.
+
+Post-mortem 3: INC-87015
+------------------------
+
+Incident INC-87015 occurred on 24 November 2022 at the Perth data center and lasted 218 minutes. Severity was rated SEV-3. The incident commander was Tomas Novak, supported by the Platform team.
+
+Root cause: a misconfigured DNS record caused 26% of requests to fail. 16376 customers were affected. The first alert fired 31 minutes after the change was deployed (change ticket CHG-4974).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Rafael Costa will add automated validation by 20 December 2022; Diego Alvarez will update the runbook; estimated cost of the outage was $250,000.
+
+Lessons learned: alert thresholds were set to 18 minutes, which was too slow. We now require a canary phase of 25 minutes before global rollout.
+
+Post-mortem 4: INC-47101
+------------------------
+
+Incident INC-47101 occurred on 13 August 2024 at the Nairobi data center and lasted 272 minutes. Severity was rated SEV-3. The incident commander was Kofi Mensah, supported by the Security team.
+
+Root cause: a misconfigured certificate caused 14% of requests to fail. 62537 customers were affected. The first alert fired 21 minutes after the change was deployed (change ticket CHG-4328).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Sara Haddad will add automated validation by 11 July 2019; Yuki Mori will update the runbook; estimated cost of the outage was $889,000.
+
+Lessons learned: alert thresholds were set to 8 minutes, which was too slow. We now require a canary phase of 52 minutes before global rollout.
+
+Post-mortem 5: INC-29126
+------------------------
+
+Incident INC-29126 occurred on 1 May 2025 at the Nairobi data center and lasted 161 minutes. Severity was rated SEV-2. The incident commander was Sara Haddad, supported by the Data Engineering team.
+
+Root cause: a misconfigured certificate caused 74% of requests to fail. 33208 customers were affected. The first alert fired 32 minutes after the change was deployed (change ticket CHG-6530).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Tomas Novak will add automated validation by 25 August 2026; Ingrid Solberg will update the runbook; estimated cost of the outage was $177,000.
+
+Lessons learned: alert thresholds were set to 24 minutes, which was too slow. We now require a canary phase of 55 minutes before global rollout.
+
+Post-mortem 6: INC-56160
+------------------------
+
+Incident INC-56160 occurred on 6 March 2026 at the Denver data center and lasted 560 minutes. Severity was rated SEV-1. The incident commander was Kofi Mensah, supported by the Platform team.
+
+Root cause: a misconfigured load balancer caused 87% of requests to fail. 7358 customers were affected. The first alert fired 1 minutes after the change was deployed (change ticket CHG-7756).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Priya Nair will add automated validation by 27 November 2022; Marcus Webb will update the runbook; estimated cost of the outage was $729,000.
+
+Lessons learned: alert thresholds were set to 5 minutes, which was too slow. We now require a canary phase of 5 minutes before global rollout.
+
+Post-mortem 7: INC-38668
+------------------------
+
+Incident INC-38668 occurred on 17 August 2024 at the Lisbon data center and lasted 499 minutes. Severity was rated SEV-4. The incident commander was Aiko Tanaka, supported by the Platform team.
+
+Root cause: a misconfigured queue consumer caused 72% of requests to fail. 54914 customers were affected. The first alert fired 1 minutes after the change was deployed (change ticket CHG-1274).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Kofi Mensah will add automated validation by 24 May 2023; Aiko Tanaka will update the runbook; estimated cost of the outage was $519,000.
+
+Lessons learned: alert thresholds were set to 27 minutes, which was too slow. We now require a canary phase of 49 minutes before global rollout.
+
+Post-mortem 8: INC-98346
+------------------------
+
+Incident INC-98346 occurred on 14 March 2020 at the Osaka data center and lasted 541 minutes. Severity was rated SEV-2. The incident commander was Lena Fischer, supported by the Data Engineering team.
+
+Root cause: a misconfigured queue consumer caused 69% of requests to fail. 34084 customers were affected. The first alert fired 23 minutes after the change was deployed (change ticket CHG-5379).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Diego Alvarez will add automated validation by 3 June 2025; Ingrid Solberg will update the runbook; estimated cost of the outage was $583,000.
+
+Lessons learned: alert thresholds were set to 8 minutes, which was too slow. We now require a canary phase of 49 minutes before global rollout.
+
+Post-mortem 9: INC-39603
+------------------------
+
+Incident INC-39603 occurred on 10 November 2020 at the Lisbon data center and lasted 100 minutes. Severity was rated SEV-4. The incident commander was Diego Alvarez, supported by the Security team.
+
+Root cause: a misconfigured queue consumer caused 62% of requests to fail. 8355 customers were affected. The first alert fired 41 minutes after the change was deployed (change ticket CHG-1154).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Rafael Costa will add automated validation by 6 February 2026; Diego Alvarez will update the runbook; estimated cost of the outage was $665,000.
+
+Lessons learned: alert thresholds were set to 26 minutes, which was too slow. We now require a canary phase of 26 minutes before global rollout.
+
+Post-mortem 10: INC-84167
+-------------------------
+
+Incident INC-84167 occurred on 28 February 2019 at the Tallinn data center and lasted 221 minutes. Severity was rated SEV-4. The incident commander was Tomas Novak, supported by the Platform team.
+
+Root cause: a misconfigured load balancer caused 89% of requests to fail. 37749 customers were affected. The first alert fired 35 minutes after the change was deployed (change ticket CHG-1539).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Priya Nair will add automated validation by 28 June 2019; Lena Fischer will update the runbook; estimated cost of the outage was $606,000.
+
+Lessons learned: alert thresholds were set to 5 minutes, which was too slow. We now require a canary phase of 53 minutes before global rollout.
+
+Post-mortem 11: INC-62205
+-------------------------
+
+Incident INC-62205 occurred on 3 May 2021 at the Pune data center and lasted 251 minutes. Severity was rated SEV-4. The incident commander was Hannah Cole, supported by the Logistics team.
+
+Root cause: a misconfigured cache cluster caused 51% of requests to fail. 19343 customers were affected. The first alert fired 45 minutes after the change was deployed (change ticket CHG-2284).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Kofi Mensah will add automated validation by 24 June 2019; Marcus Webb will update the runbook; estimated cost of the outage was $452,000.
+
+Lessons learned: alert thresholds were set to 8 minutes, which was too slow. We now require a canary phase of 58 minutes before global rollout.
+
+Post-mortem 12: INC-19963
+-------------------------
+
+Incident INC-19963 occurred on 11 October 2025 at the Hamburg data center and lasted 35 minutes. Severity was rated SEV-3. The incident commander was Ingrid Solberg, supported by the Security team.
+
+Root cause: a misconfigured DNS record caused 47% of requests to fail. 73487 customers were affected. The first alert fired 25 minutes after the change was deployed (change ticket CHG-8075).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Priya Nair will add automated validation by 22 October 2025; Marcus Webb will update the runbook; estimated cost of the outage was $795,000.
+
+Lessons learned: alert thresholds were set to 20 minutes, which was too slow. We now require a canary phase of 23 minutes before global rollout.
+
+Post-mortem 13: INC-42302
+-------------------------
+
+Incident INC-42302 occurred on 23 February 2020 at the Nairobi data center and lasted 162 minutes. Severity was rated SEV-4. The incident commander was Rafael Costa, supported by the Quality team.
+
+Root cause: a misconfigured disk quota caused 21% of requests to fail. 52068 customers were affected. The first alert fired 21 minutes after the change was deployed (change ticket CHG-6909).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Marcus Webb will add automated validation by 3 January 2023; Ingrid Solberg will update the runbook; estimated cost of the outage was $373,000.
+
+Lessons learned: alert thresholds were set to 25 minutes, which was too slow. We now require a canary phase of 22 minutes before global rollout.
+
+Post-mortem 14: INC-23399
+-------------------------
+
+Incident INC-23399 occurred on 5 February 2021 at the Quito data center and lasted 464 minutes. Severity was rated SEV-4. The incident commander was Marcus Webb, supported by the Platform team.
+
+Root cause: a misconfigured load balancer caused 47% of requests to fail. 73642 customers were affected. The first alert fired 6 minutes after the change was deployed (change ticket CHG-6315).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Diego Alvarez will add automated validation by 1 May 2025; Diego Alvarez will update the runbook; estimated cost of the outage was $802,000.
+
+Lessons learned: alert thresholds were set to 3 minutes, which was too slow. We now require a canary phase of 51 minutes before global rollout.
+
+Post-mortem 15: INC-83339
+-------------------------
+
+Incident INC-83339 occurred on 8 October 2021 at the Quito data center and lasted 178 minutes. Severity was rated SEV-2. The incident commander was Tomas Novak, supported by the Field Support team.
+
+Root cause: a misconfigured cache cluster caused 65% of requests to fail. 20127 customers were affected. The first alert fired 5 minutes after the change was deployed (change ticket CHG-3739).
+
+Remediation: the change was rolled back and the service recovered fully. Follow-up actions: Diego Alvarez will add automated validation by 9 July 2023; Ingrid Solberg will update the runbook; estimated cost of the outage was $806,000.
+
+Lessons learned: alert thresholds were set to 3 minutes, which was too slow. We now require a canary phase of 28 minutes before global rollout.

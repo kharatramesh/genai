@@ -1,0 +1,125 @@
+Customer Support FAQ Collection 5
+=================================
+
+CloudVault Frequently Asked Questions
+-------------------------------------
+
+Q: How do I change the billing cycle in CloudVault?
+A: Open Settings, choose the Workspace tab, and select option 5. The Basic plan costs $29 per user per month and includes 272 GB of storage. Support is available 24/7 at ticket queue SUP-529.
+
+Q: How do I add a team member in CloudVault?
+A: Open Settings, choose the Account tab, and select option 3. The Business plan costs $14 per user per month and includes 23 GB of storage. Support is available 24/7 at ticket queue SUP-965.
+
+Q: How do I enable two-factor authentication in CloudVault?
+A: Open Settings, choose the Workspace tab, and select option 6. The Enterprise plan costs $98 per user per month and includes 44 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-197.
+
+Q: How do I enable two-factor authentication in CloudVault?
+A: Open Settings, choose the Security tab, and select option 7. The Basic plan costs $78 per user per month and includes 291 GB of storage. Support is available 24/7 at ticket queue SUP-545.
+
+Q: How do I change the billing cycle in CloudVault?
+A: Open Settings, choose the Security tab, and select option 4. The Business plan costs $36 per user per month and includes 436 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-920.
+
+Q: How do I add a team member in CloudVault?
+A: Open Settings, choose the Billing tab, and select option 6. The Enterprise plan costs $37 per user per month and includes 120 GB of storage. Support is available 24/7 at ticket queue SUP-307.
+
+PulseTrack Frequently Asked Questions
+-------------------------------------
+
+Q: How do I enable two-factor authentication in PulseTrack?
+A: Open Settings, choose the Account tab, and select option 3. The Basic plan costs $24 per user per month and includes 231 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-421.
+
+Q: How do I add a team member in PulseTrack?
+A: Open Settings, choose the Account tab, and select option 9. The Business plan costs $29 per user per month and includes 232 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-574.
+
+Q: How do I upgrade my plan in PulseTrack?
+A: Open Settings, choose the Account tab, and select option 2. The Pro plan costs $90 per user per month and includes 156 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-813.
+
+Q: How do I enable two-factor authentication in PulseTrack?
+A: Open Settings, choose the Account tab, and select option 4. The Business plan costs $21 per user per month and includes 47 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-354.
+
+Q: How do I upgrade my plan in PulseTrack?
+A: Open Settings, choose the Workspace tab, and select option 9. The Basic plan costs $89 per user per month and includes 154 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-939.
+
+Q: How do I export my data in PulseTrack?
+A: Open Settings, choose the Account tab, and select option 7. The Enterprise plan costs $74 per user per month and includes 384 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-355.
+
+Q: How do I reset my password in PulseTrack?
+A: Open Settings, choose the Workspace tab, and select option 2. The Pro plan costs $18 per user per month and includes 7 GB of storage. Support is available 24/7 at ticket queue SUP-950.
+
+Orbit CRM Frequently Asked Questions
+------------------------------------
+
+Q: How do I export my data in Orbit CRM?
+A: Open Settings, choose the Security tab, and select option 7. The Business plan costs $90 per user per month and includes 323 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-186.
+
+Q: How do I enable two-factor authentication in Orbit CRM?
+A: Open Settings, choose the Billing tab, and select option 2. The Basic plan costs $11 per user per month and includes 102 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-554.
+
+Q: How do I export my data in Orbit CRM?
+A: Open Settings, choose the Account tab, and select option 6. The Basic plan costs $8 per user per month and includes 483 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-151.
+
+Q: How do I export my data in Orbit CRM?
+A: Open Settings, choose the Workspace tab, and select option 7. The Enterprise plan costs $6 per user per month and includes 196 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-536.
+
+Q: How do I export my data in Orbit CRM?
+A: Open Settings, choose the Billing tab, and select option 4. The Pro plan costs $38 per user per month and includes 144 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-252.
+
+Q: How do I reset my password in Orbit CRM?
+A: Open Settings, choose the Security tab, and select option 5. The Enterprise plan costs $55 per user per month and includes 452 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-590.
+
+Q: How do I reset my password in Orbit CRM?
+A: Open Settings, choose the Account tab, and select option 5. The Enterprise plan costs $20 per user per month and includes 215 GB of storage. Support is available 24/7 at ticket queue SUP-758.
+
+Sparrow Mail Frequently Asked Questions
+---------------------------------------
+
+Q: How do I export my data in Sparrow Mail?
+A: Open Settings, choose the Account tab, and select option 7. The Business plan costs $64 per user per month and includes 279 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-452.
+
+Q: How do I enable two-factor authentication in Sparrow Mail?
+A: Open Settings, choose the Billing tab, and select option 7. The Business plan costs $26 per user per month and includes 14 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-711.
+
+Q: How do I export my data in Sparrow Mail?
+A: Open Settings, choose the Account tab, and select option 5. The Basic plan costs $63 per user per month and includes 272 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-885.
+
+Q: How do I enable two-factor authentication in Sparrow Mail?
+A: Open Settings, choose the Security tab, and select option 3. The Basic plan costs $34 per user per month and includes 337 GB of storage. Support is available 24/7 at ticket queue SUP-372.
+
+Q: How do I enable two-factor authentication in Sparrow Mail?
+A: Open Settings, choose the Account tab, and select option 4. The Enterprise plan costs $48 per user per month and includes 479 GB of storage. Support is available 24/7 at ticket queue SUP-280.
+
+Q: How do I export my data in Sparrow Mail?
+A: Open Settings, choose the Billing tab, and select option 6. The Basic plan costs $93 per user per month and includes 359 GB of storage. Support is available weekdays 9-17 CET at ticket queue SUP-681.
+
+Q: How do I enable two-factor authentication in Sparrow Mail?
+A: Open Settings, choose the Security tab, and select option 4. The Enterprise plan costs $72 per user per month and includes 159 GB of storage. Support is available 24/7 at ticket queue SUP-602.
+
+Q: How do I reset my password in Sparrow Mail?
+A: Open Settings, choose the Account tab, and select option 1. The Pro plan costs $80 per user per month and includes 113 GB of storage. Support is available 24/7 at ticket queue SUP-639.
+
+Q: How do I add a team member in Sparrow Mail?
+A: Open Settings, choose the Account tab, and select option 6. The Pro plan costs $19 per user per month and includes 175 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-281.
+
+Q: How do I upgrade my plan in Sparrow Mail?
+A: Open Settings, choose the Account tab, and select option 1. The Pro plan costs $78 per user per month and includes 361 GB of storage. Support is available 24/7 at ticket queue SUP-892.
+
+Gridlock VPN Frequently Asked Questions
+---------------------------------------
+
+Q: How do I enable two-factor authentication in Gridlock VPN?
+A: Open Settings, choose the Billing tab, and select option 2. The Business plan costs $93 per user per month and includes 483 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-505.
+
+Q: How do I enable two-factor authentication in Gridlock VPN?
+A: Open Settings, choose the Account tab, and select option 6. The Business plan costs $44 per user per month and includes 70 GB of storage. Support is available 24/7 at ticket queue SUP-849.
+
+Q: How do I add a team member in Gridlock VPN?
+A: Open Settings, choose the Workspace tab, and select option 6. The Pro plan costs $93 per user per month and includes 496 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-810.
+
+Q: How do I enable two-factor authentication in Gridlock VPN?
+A: Open Settings, choose the Billing tab, and select option 4. The Pro plan costs $51 per user per month and includes 158 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-805.
+
+Q: How do I upgrade my plan in Gridlock VPN?
+A: Open Settings, choose the Security tab, and select option 3. The Basic plan costs $92 per user per month and includes 486 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-500.
+
+Q: How do I enable two-factor authentication in Gridlock VPN?
+A: Open Settings, choose the Account tab, and select option 3. The Business plan costs $81 per user per month and includes 114 GB of storage. Support is available weekdays 8-20 EST at ticket queue SUP-679.

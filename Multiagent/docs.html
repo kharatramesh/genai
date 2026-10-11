@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Agent Workshop</title>
+<style>
+  :root { --bg:#fff; --fg:#1f2328; --muted:#59636e; --card:#f6f8fa; --line:#d1d9e0; --accent:#0969da;
+          --off:#1a7f37; --on:#8250df; --warn:#9a6700; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --card:#151b23; --line:#3d444d; --accent:#4493f8;
+            --off:#3fb950; --on:#ab7df8; --warn:#d29922; }
+  }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--fg); font:16px/1.65 system-ui,sans-serif; margin:0; }
+  main { max-width:900px; margin:0 auto; padding:32px 16px 80px; }
+  h1 { margin:0 0 4px; } h2 { margin-top:48px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  h3 { margin-top:28px; }
+  a { color:var(--accent); }
+  pre, code { font-family:ui-monospace,Consolas,monospace; font-size:13.5px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; line-height:1.5; }
+  code { background:var(--card); padding:1px 5px; border-radius:4px; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .muted { color:var(--muted); }
+  .box { border-left:4px solid var(--accent); background:var(--card); padding:10px 14px; border-radius:4px; margin:16px 0; }
+  .theory { border-left-color:var(--accent); } .demo { border-left-color:var(--off); } .warn { border-left-color:var(--warn); }
+  .box > b:first-child { display:block; margin-bottom:4px; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
+  .off { color:var(--off); } .on { color:var(--on); }
+  nav ol { columns:2; column-gap:32px; padding-left:20px; }
+  @media (max-width:600px) { nav ol { columns:1; } }
+  .arch { overflow-x:auto; }
+  .arch svg { min-width:640px; width:100%; height:auto; }
+  .arch text { fill:var(--fg); font:13px system-ui,sans-serif; }
+  .arch .node { fill:var(--card); stroke:var(--line); }
+  .arch .edge { stroke:var(--muted); fill:none; stroke-width:1.5; }
+  .arch .offs { stroke:var(--off); stroke-width:2; } .arch .ons { stroke:var(--on); stroke-width:2; }
+  .arch .small { font-size:11px; fill:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>Building a Multi-Agent System with LangGraph</h1>
+<p class="muted">Instructor guide: theory and a hands-on demo for each step. Four specialist agents, a LangGraph orchestrator, human-in-the-loop approvals, Langfuse observability, and a mix of offline and online models.</p>
+
+<nav>
+<h2 style="margin-top:24px">Contents</h2>
+<ol>
+  <li><a href="#s0">The big picture</a></li>
+  <li><a href="#s1">Setup</a></li>
+  <li><a href="#s2">Offline vs online models</a></li>
+  <li><a href="#s3">The ReAct agent building block</a></li>
+  <li><a href="#s4">Human in the loop</a></li>
+  <li><a href="#s5">Agent 1: File manager</a></li>
+  <li><a href="#s6">Agent 2: System monitor</a></li>
+  <li><a href="#s7">Agent 3: Container manager</a></li>
+  <li><a href="#s8">Observability with Langfuse</a></li>
+  <li><a href="#s9">Agent 4: Agent monitor</a></li>
+  <li><a href="#s10">The LangGraph orchestrator</a></li>
+  <li><a href="#s11">Running the whole system</a></li>
+  <li><a href="#s12">Lab exercises</a></li>
+  <li><a href="#s13">Troubleshooting</a></li>
+</ol>
+</nav>
+
+<!-- ================================================================ -->
+<h2 id="s0">0. The big picture</h2>
+<p>One agent with 25 tools gets confused: the prompt is long, the tool list is long, and the model picks the wrong tool. A <b>multi-agent system</b> splits the work into <b>specialists</b>, each with a short prompt and a few tools, and puts an <b>orchestrator</b> in front that decides who does what.</p>
+
+<div class="arch" role="img" aria-label="Architecture: user to orchestrator (begin, planner, summarize) which dispatches to four agents; Langfuse traces everything; human approval gates risky tools.">
+<svg viewBox="0 0 760 360">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker></defs>
+  <rect class="node" x="20" y="150" width="90" height="44" rx="8"/><text x="65" y="177" text-anchor="middle">User (CLI)</text>
+  <rect class="node" x="150" y="40" width="300" height="70" rx="10"/>
+  <text x="300" y="64" text-anchor="middle" font-weight="600">Orchestrator (supervisor/graph.py)</text>
+  <text x="300" y="86" text-anchor="middle" class="small">begin → planner → approve_plan → [workers in order] → summarize</text>
+  <text x="300" y="100" text-anchor="middle" class="small">runs on the offline model</text>
+  <path class="edge" d="M110 165 C130 120 140 95 150 85" marker-end="url(#a)"/>
+  <rect class="node offs" x="150" y="160" width="140" height="56" rx="8"/><text x="220" y="184" text-anchor="middle">file_agent</text><text x="220" y="202" text-anchor="middle" class="small">offline · Ollama</text>
+  <rect class="node offs" x="310" y="160" width="140" height="56" rx="8"/><text x="380" y="184" text-anchor="middle">system_agent</text><text x="380" y="202" text-anchor="middle" class="small">offline · Ollama</text>
+  <rect class="node ons" x="150" y="240" width="140" height="56" rx="8"/><text x="220" y="264" text-anchor="middle">container_agent</text><text x="220" y="282" text-anchor="middle" class="small">online · Claude</text>
+  <rect class="node ons" x="310" y="240" width="140" height="56" rx="8"/><text x="380" y="264" text-anchor="middle">monitor_agent</text><text x="380" y="282" text-anchor="middle" class="small">online · Claude</text>
+  <path class="edge" d="M300 110 L300 150" marker-end="url(#a)"/>
+  <rect class="node" x="520" y="40" width="210" height="70" rx="10"/><text x="625" y="68" text-anchor="middle" font-weight="600">Langfuse</text><text x="625" y="88" text-anchor="middle" class="small">traces every LLM + tool call</text>
+  <path class="edge" d="M450 75 L520 75" marker-end="url(#a)" stroke-dasharray="4 3"/>
+  <path class="edge" d="M450 268 C500 268 600 200 620 112" marker-end="url(#a)"/>
+  <text x="560" y="230" class="small">monitor_agent reads traces</text>
+  <rect class="node" x="520" y="290" width="210" height="50" rx="10"/><text x="625" y="312" text-anchor="middle" font-weight="600">Human approval</text><text x="625" y="330" text-anchor="middle" class="small">interrupt() on risky tools</text>
+  <path class="edge" d="M290 290 C350 330 450 320 520 315" marker-end="url(#a)" stroke-dasharray="4 3"/>
+</svg>
+</div>
+
+<table>
+  <tr><th>Folder</th><th>Role</th><th>Model</th><th>Risky actions (need approval)</th></tr>
+  <tr><td><code>file_agent/</code></td><td>Create, read, search, delete files in <code>workspace/</code></td><td><span class="tag off">offline</span></td><td>overwrite, delete</td></tr>
+  <tr><td><code>system_agent/</code></td><td>CPU, RAM, disk, network, top processes</td><td><span class="tag off">offline</span></td><td>none (read-only)</td></tr>
+  <tr><td><code>container_agent/</code></td><td>Docker lifecycle: run, start, stop, restart, remove, logs, stats</td><td><span class="tag on">online</span></td><td>run, stop, restart, remove</td></tr>
+  <tr><td><code>monitor_agent/</code></td><td>Reads Langfuse traces to report on all agents</td><td><span class="tag on">online</span></td><td>none (read-only)</td></tr>
+  <tr><td><code>supervisor/</code></td><td>LangGraph orchestrator (planner + summary)</td><td><span class="tag off">offline</span></td><td>whole plan (optional, <code>APPROVE_PLAN=1</code>)</td></tr>
+  <tr><td><code>common/</code></td><td>Shared building blocks: models, HITL, tracing, ReAct builder, CLI</td><td></td><td></td></tr>
+</table>
+
+<pre><code>Multiagent/
+├── main.py                 # run the whole system
+├── requirements.txt  .env.example  README.md  docs.html
+├── common/
+│   ├── models.py           # STEP 2  offline_llm() / online_llm()
+│   ├── react.py            # STEP 3  build_react_agent()
+│   ├── hitl.py             # STEP 4  require_approval()  (LangGraph interrupt)
+│   ├── tracing.py          # STEP 8  Langfuse callback + run config
+│   └── cli.py              # STEP 11 terminal loop that answers interrupts
+├── file_agent/       agent.py  tools.py  run.py
+├── system_agent/     agent.py  tools.py  run.py
+├── container_agent/  agent.py  tools.py  run.py
+├── monitor_agent/    agent.py  tools.py  run.py
+├── supervisor/       graph.py              # STEP 10
+└── workspace/                              # the only folder file_agent may touch</code></pre>
+<p>Every agent folder has the same three files: <code>tools.py</code> (what it can do), <code>agent.py</code> (prompt + model + <code>build()</code>) and <code>run.py</code> (run it alone). That shape repeats, so once students understand one agent they can read all four.</p>
+
+<!-- ================================================================ -->
+<h2 id="s1">1. Setup</h2>
+<div class="box theory"><b>Theory</b>
+We need: <b>LangGraph</b> (graphs, state, checkpointing, interrupts), <b>LangChain</b> model wrappers (<code>langchain-ollama</code>, <code>langchain-anthropic</code>), <b>Langfuse</b> (tracing), <b>psutil</b> (system metrics) and the <b>Docker CLI</b>.</div>
+<div class="box demo"><b>Practical</b>
+<pre><code>cd Multiagent
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env            # macOS/Linux: cp .env.example .env
+ollama pull qwen3:8b              # the offline model
+ollama serve                      # if it is not already running</code></pre>
+Then fill in <code>.env</code>:
+<pre><code>OLLAMA_MODEL=qwen3:8b
+ANTHROPIC_API_KEY=sk-ant-...        # online agents
+ANTHROPIC_MODEL=claude-haiku-5-5
+FORCE_OFFLINE=0                     # 1 = run everything on Ollama (no key needed)
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_HOST=https://cloud.langfuse.com
+AUTO_APPROVE=0                      # never 1 in class: it skips the human
+APPROVE_PLAN=0                      # 1 = also approve every plan</code></pre>
+For the container agent, install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> and check <code>docker ps</code> works.</div>
+
+<!-- ================================================================ -->
+<h2 id="s2">2. Offline vs online models</h2>
+<div class="box theory"><b>Theory</b>
+<table>
+  <tr><th></th><th><span class="tag off">Offline</span> (Ollama)</th><th><span class="tag on">Online</span> (Claude API)</th></tr>
+  <tr><td>Data privacy</td><td>Nothing leaves the machine</td><td>Prompt and tool output go to the provider</td></tr>
+  <tr><td>Cost</td><td>Free after download; uses your CPU/GPU</td><td>Pay per token</td></tr>
+  <tr><td>Quality</td><td>Good for narrow tasks; weaker at planning</td><td>Stronger reasoning and tool use</td></tr>
+  <tr><td>Availability</td><td>Works without internet</td><td>Needs network and an API key</td></tr>
+</table>
+<b>How we split them:</b> the file agent and system monitor read local data (file contents, process lists), so they stay <b>offline</b>. Container management and trace analysis benefit from stronger reasoning and handle no private file contents, so they go <b>online</b>. Because every agent gets its model from one factory, moving an agent between offline and online is a one-word change.</div>
+
+<div class="box demo"><b>Code: <code>common/models.py</code></b>
+<pre><code>def offline_llm(temperature: float = 0):
+    """Local model served by Ollama. No internet, no API key, data never leaves the machine."""
+    return ChatOllama(model=os.getenv("OLLAMA_MODEL", "qwen3:8b"),
+                      base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                      temperature=temperature)
+
+
+def online_llm(temperature: float = 0):
+    """Hosted Claude model. Falls back to the local model if no key / FORCE_OFFLINE=1."""
+    if os.getenv("FORCE_OFFLINE") == "1" or not os.getenv("ANTHROPIC_API_KEY"):
+        print("[models] online model unavailable -> using offline fallback")
+        return offline_llm(temperature)
+    from langchain_anthropic import ChatAnthropic
+    return ChatAnthropic(model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5"),
+                         temperature=temperature, max_tokens=2048)</code></pre>
+<b>Try it:</b>
+<pre><code>python -c "from common.models import offline_llm; print(offline_llm().invoke('Say hi in 3 words').content)"
+python -c "from common.models import online_llm;  print(online_llm().invoke('Say hi in 3 words').content)"</code></pre></div>
+
+<!-- ================================================================ -->
+<h2 id="s3">3. The ReAct agent building block</h2>
+<div class="box theory"><b>Theory: ReAct = Reason + Act</b>
+The model looks at the conversation and either answers or asks for a tool. If it asks for a tool, we run it, add the result to the conversation, and ask the model again. In LangGraph this is a graph with two nodes and a loop:
+<pre><code>START → model ──(tool_calls?)──yes──► tools ──┐
+          ▲                                    │
+          └────────────────────────────────────┘
+          └──no──► END</code></pre>
+<ul>
+  <li><b>State</b>: <code>MessagesState</code>, a list of messages that every node appends to.</li>
+  <li><b>Node</b>: a Python function <code>state → partial update</code>.</li>
+  <li><b>Conditional edge</b>: <code>tools_condition</code> routes to <code>"tools"</code> if the last AI message has tool calls, else to <code>END</code>.</li>
+  <li><b><code>bind_tools</code></b> sends each tool's name, docstring and argument schema to the model. <b>The docstring is the tool's prompt</b>, so write it carefully.</li>
+</ul></div>
+<div class="box demo"><b>Code: <code>common/react.py</code></b> (all four agents are built with this)
+<pre><code>def build_react_agent(llm, tools, system_prompt: str, name: str, checkpointer=None):
+    llm_with_tools = llm.bind_tools(tools)
+
+    def call_model(state: MessagesState):
+        msgs = [SystemMessage(system_prompt)] + state["messages"]
+        return {"messages": [llm_with_tools.invoke(msgs)]}
+
+    g = StateGraph(MessagesState)
+    g.add_node("model", call_model)
+    g.add_node("tools", ToolNode(tools, handle_tool_errors=True))  # tool exceptions -> error text for the LLM
+    g.add_edge(START, "model")
+    g.add_conditional_edges("model", tools_condition)  # tool call -> "tools", else END
+    g.add_edge("tools", "model")
+    return g.compile(name=name, checkpointer=checkpointer)</code></pre>
+<b>Teaching point 1:</b> <code>handle_tool_errors=True</code> turns a tool exception (missing file, bad path, invalid container name) into a <code>ToolMessage</code> the model can read and react to. Without it, LangGraph's default only catches bad-argument errors; any other exception crashes the whole run.<br>
+<b>Teaching point 2:</b> when an agent runs inside the orchestrator we pass <code>checkpointer=None</code>. The sub-graph then uses the parent's checkpointer, which is what lets an interrupt deep inside a tool pause the <i>whole</i> system.</div>
+
+<!-- ================================================================ -->
+<h2 id="s4">4. Human in the loop (HITL)</h2>
+<div class="box theory"><b>Theory</b>
+Agents should not delete files or containers on their own. LangGraph's <code>interrupt(payload)</code>:
+<ol>
+  <li><b>pauses</b> the graph and saves its state with the <b>checkpointer</b> (keyed by <code>thread_id</code>);</li>
+  <li>returns control to the caller with the <code>payload</code> (shown as <code>__interrupt__</code> in the stream);</li>
+  <li>the caller shows it to a human and calls <code>graph.stream(Command(resume=answer), config)</code>. If several interrupts are pending at once (the model asked for two risky tools in one step), resume with a dict <code>{interrupt.id: answer}</code>, one entry per interrupt;</li>
+  <li>the interrupted node <b>re-runs from the top</b>, and this time <code>interrupt()</code> returns <code>answer</code>.</li>
+</ol>
+Because of point 4, <b>always ask for approval before any side effect</b> in the tool. Anything above the <code>interrupt()</code> line runs twice.
+<p>This project has two approval points:</p>
+<ul>
+  <li><b>Tool level</b>: risky tools call <code>require_approval()</code> (delete or overwrite a file; run, stop, restart or remove a container).</li>
+  <li><b>Plan level</b> (optional, <code>APPROVE_PLAN=1</code>): the orchestrator shows the whole plan before running it.</li>
+</ul>
+When the human says no, the tool returns a <b>rejection message to the LLM</b> instead of raising an error, so the agent can explain what happened.</div>
+<div class="box demo"><b>Code: <code>common/hitl.py</code></b>
+<pre><code>from langgraph.types import interrupt
+
+def require_approval(action: str, details: str) -> tuple[bool, str]:
+    """Ask a human. Returns (approved, feedback)."""
+    if os.getenv("AUTO_APPROVE") == "1":
+        return True, ""
+    answer = interrupt({"type": "approval", "action": action, "details": details})
+    if isinstance(answer, dict):
+        return bool(answer.get("approved")), str(answer.get("feedback", ""))
+    return str(answer).strip().lower() in {"y", "yes", "approve", "approved", "ok"}, ""
+
+
+def rejected(feedback: str = "") -> str:
+    """Text handed back to the LLM so it can react to a 'no'."""
+    return "REJECTED by human operator." + (f" Reason: {feedback}" if feedback else "") + \
+        " Do not retry this action; tell the user it was not performed."</code></pre>
+<b>The caller side: <code>common/cli.py</code></b>
+<pre><code>def run_turn(app, payload, config) -> str:
+    """Run one user request to completion, looping while the graph asks for approval."""
+    final = ""
+    while True:
+        pending = []
+        for chunk in app.stream(payload, config, stream_mode="updates"):
+            for node, update in chunk.items():
+                if node == "__interrupt__":
+                    pending.extend(update)  # several, if the model asked for 2+ risky tools at once
+                    continue
+                print(f"  [{node}]")
+                ...
+        if not pending:
+            return final
+        payload = Command(resume={i.id: ask_human(i.value) for i in pending})  # answer each interrupt by id</code></pre>
+<code>i.value</code> is the payload passed to <code>interrupt()</code>; <code>i.id</code> tells LangGraph which paused call each answer belongs to.</div>
+
+<!-- ================================================================ -->
+<h2 id="s5">5. Agent 1: File manager <span class="tag off">offline</span></h2>
+<div class="box theory"><b>Theory</b>
+<ul>
+  <li><b>Least privilege:</b> the agent only sees <code>Multiagent/workspace/</code>. <code>_safe()</code> resolves every path and refuses anything that escapes it, such as <code>../../secrets.txt</code>.</li>
+  <li><b>Safe by default:</b> creating a new file is allowed; <b>overwriting</b> or <b>deleting</b> asks a human.</li>
+  <li><b>Offline</b> because file contents are private data.</li>
+</ul></div>
+<div class="box demo"><b>Code: <code>file_agent/tools.py</code></b> (excerpt)
+<pre><code>WORKSPACE = Path(__file__).resolve().parent.parent / "workspace"
+
+def _safe(name: str) -> Path:
+    """Resolve inside the workspace; refuse '../' escapes."""
+    p = (WORKSPACE / name).resolve()
+    if p != WORKSPACE and WORKSPACE not in p.parents:
+        raise ValueError(f"Path '{name}' is outside the workspace")
+    return p
+
+@tool
+def delete_file(filename: str) -> str:
+    """Delete a file from the workspace. Requires human approval."""
+    p = _safe(filename)
+    if not p.is_file():
+        return f"'{filename}' does not exist"
+    ok, why = require_approval("delete_file", f"Permanently delete '{filename}'")
+    if not ok:
+        return rejected(why)
+    p.unlink()
+    return f"Deleted {filename}"
+
+TOOLS = [list_files, read_file, write_file, delete_file, search_in_files]</code></pre>
+<b>Code: <code>file_agent/agent.py</code></b>
+<pre><code>DESCRIPTION = "create, read, search, list and delete files in the workspace folder"
+PROMPT = ("You are the File Manager agent. You only manage files inside the workspace using your tools. "
+          "Never invent file contents you have not read. Be concise.")
+
+def build(checkpointer=None):
+    return build_react_agent(offline_llm(), TOOLS, PROMPT, name="file_agent", checkpointer=checkpointer)</code></pre>
+<b>Demo</b>: <code>python -m file_agent.run</code>
+<pre><code>You: create a file notes.txt containing: hello class
+  [model]
+  [tools]
+  [model]
+Answer: The file `notes.txt` has been created with the content: `hello class`
+
+You: delete notes.txt
+  [model]
+
+  HUMAN APPROVAL NEEDED -> delete_file
+     Permanently delete 'notes.txt'
+     approve? [y/N, or type a reason to reject]: y
+  [tools]
+  [model]
+Answer: The file `notes.txt` has been deleted.</code></pre>
+<p class="muted">This is real output from a test run on <code>qwen3:8b</code>.</p>
+<b>Ask the class:</b> run it again, answer <code>no, keep it for the audit</code>, and look at how the agent reports the rejection. Then try <code>read ../.env</code> and watch the sandbox refuse it.</div>
+
+<!-- ================================================================ -->
+<h2 id="s6">6. Agent 2: System monitor <span class="tag off">offline</span></h2>
+<div class="box theory"><b>Theory</b>
+<ul>
+  <li><b>Read-only tools need no approval.</b> The risk comes from the tools, not the agent, so this agent has no write tools at all.</li>
+  <li><b>Ground the answer in tools:</b> the prompt says "call tools to get real numbers" so the model does not guess.</li>
+  <li><b>Offline</b> because hostnames and process lists describe your infrastructure.</li>
+</ul></div>
+<div class="box demo"><b>Code: <code>system_agent/tools.py</code></b> (excerpt)
+<pre><code>@tool
+def memory_usage() -> str:
+    """RAM and swap usage."""
+    m, s = psutil.virtual_memory(), psutil.swap_memory()
+    ...
+    return f"RAM: {gb(m.used)} / {gb(m.total)} ({m.percent}%) | Swap: ..."
+
+@tool
+def top_processes(count: int = 5, sort_by: str = "memory") -> str:
+    """Top processes by 'memory' or 'cpu'."""
+    # psutil gotcha: the first cpu_percent() call per process always returns 0.0,
+    # so we prime every process, sleep 0.5 s, then measure.
+    ...
+
+TOOLS = [system_info, cpu_usage, memory_usage, disk_usage, top_processes, network_stats]</code></pre>
+<b>Code: <code>system_agent/agent.py</code></b>
+<pre><code>PROMPT = ("You are the System Monitor agent. Call tools to get real numbers, then summarise them. "
+          "Flag anything above 85% utilisation as a warning.")
+
+def build(checkpointer=None):
+    return build_react_agent(offline_llm(), TOOLS, PROMPT, name="system_agent", checkpointer=checkpointer)</code></pre>
+<b>Demo</b>: <code>python -m system_agent.run</code>
+<pre><code>You: give me a health check of this machine
+  [model]
+  [tools]        ← cpu_usage, memory_usage, disk_usage called in one step
+  [model]
+Answer: CPU 23% ... RAM 13.7 / 15.9 GB (86%) ⚠ above 85% ... Disk C: 71% ...</code></pre>
+<p class="muted">Expected shape of the output. Numbers and wording depend on the machine and the model.</p></div>
+
+<!-- ================================================================ -->
+<h2 id="s7">7. Agent 3: Container manager <span class="tag on">online</span></h2>
+<div class="box theory"><b>Theory: container lifecycle</b>
+<pre><code>  image ──run──► running ──stop──► exited ──start──► running
+                    │                 │
+                 restart            remove (rm -f)  ──► gone (data in the container layer is lost)</code></pre>
+<ul>
+  <li>We call the <b>docker CLI with an argument list</b> (<code>subprocess.run(["docker", ...])</code>), <b>never a shell string</b>, so the LLM cannot inject <code>; rm -rf /</code>.</li>
+  <li>Names, images and port mappings are <b>validated with regexes</b> before use.</li>
+  <li><b>State-changing actions</b> (run, stop, restart, remove) need approval. <b>Inspection</b> (list, logs, stats) and <code>start</code> do not.</li>
+  <li><b>Online</b> because multi-step lifecycle work ("replace the web container with a new image on port 8081") needs stronger reasoning.</li>
+</ul></div>
+<div class="box demo"><b>Code: <code>container_agent/tools.py</code></b> (excerpt)
+<pre><code>def _docker(*args: str, timeout: int = 120) -> str:
+    if not shutil.which("docker"):
+        return "ERROR: docker CLI not found. Install Docker Desktop and make sure it is running."
+    r = subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)
+    return (r.stdout + r.stderr).strip()[:4000] or "(no output)"
+
+@tool
+def run_container(image: str, name: str, port_mapping: str = "") -> str:
+    """Create and start a detached container, e.g. image='nginx:alpine', name='web', port_mapping='8080:80'. Needs approval."""
+    _check(name)
+    ...
+    cmd = ["run", "-d", "--name", name] + (["-p", port_mapping] if port_mapping else []) + [image]
+    ok, why = require_approval("run_container", "docker " + " ".join(cmd))
+    return _docker(*cmd, timeout=300) if ok else rejected(why)
+
+TOOLS = [list_containers, list_images, run_container, start_container, stop_container,
+         restart_container, remove_container, container_logs, container_stats]</code></pre>
+<b>Demo</b>: <code>python -m container_agent.run</code> (walk the whole lifecycle)
+<pre><code>You: run an nginx:alpine container called web on port 8080:80
+  HUMAN APPROVAL NEEDED -> run_container
+     docker run -d --name web -p 8080:80 nginx:alpine
+     approve? y
+      → open http://localhost:8080 in a browser
+You: show me the last 10 log lines of web       (no approval: read-only)
+You: how much memory is web using?
+You: stop web                                   (approval)
+You: start it again                             (no approval)
+You: remove web                                 (approval: answer "no" first, then "y")</code></pre></div>
+
+<!-- ================================================================ -->
+<h2 id="s8">8. Observability with Langfuse</h2>
+<div class="box theory"><b>Theory</b>
+With five LLM-driven components, "why did it do that?" is hard to answer from the terminal. <b>Langfuse</b> records a <b>trace</b> per request, with nested <b>observations</b> for every graph node, LLM call (prompt, output, tokens, cost, latency) and tool call.
+<ul>
+  <li>LangChain and LangGraph emit <b>callbacks</b>. Langfuse's <code>CallbackHandler</code> listens to them, so <b>no agent code changes</b>: we attach the handler once in the run config and it reaches every sub-graph.</li>
+  <li><code>metadata.langfuse_session_id</code> groups all turns of one chat into a <b>session</b>.</li>
+  <li><code>thread_id</code> (LangGraph) and <code>session_id</code> (Langfuse) use the same value so you can match a paused graph to its trace.</li>
+</ul></div>
+<div class="box demo"><b>Code: <code>common/tracing.py</code></b>
+<pre><code>def make_config(session_id: str | None = None, **extra) -> dict:
+    """Build the LangGraph run config: thread id (for memory/interrupts) + Langfuse callback."""
+    session_id = session_id or uuid.uuid4().hex[:8]
+    config = {"configurable": {"thread_id": session_id}, "recursion_limit": 40, **extra}
+    if langfuse_enabled():
+        from langfuse.langchain import CallbackHandler
+        config["callbacks"] = [CallbackHandler()]
+        config["metadata"] = {"langfuse_session_id": session_id}
+    return config</code></pre>
+<b>Practical</b>
+<ol>
+  <li>Create a free project at <a href="https://cloud.langfuse.com">cloud.langfuse.com</a> (or self-host with <code>docker compose</code> from the Langfuse repo) and copy the keys into <code>.env</code>.</li>
+  <li>Run any agent. The banner should say <code>Langfuse tracing: ON</code>.</li>
+  <li>In the Langfuse UI, open <b>Traces</b> and click one: you'll see <code>planner → system_agent → model → tools → ...</code> as a tree, with tokens and latency on each LLM call.</li>
+  <li>Open <b>Sessions</b> to see a whole conversation, including the turn that paused for approval.</li>
+</ol></div>
+
+<!-- ================================================================ -->
+<h2 id="s9">9. Agent 4: Agent monitor <span class="tag on">online</span></h2>
+<div class="box theory"><b>Theory: an agent that watches agents</b>
+Langfuse <i>stores</i> the telemetry. The monitor agent <i>reasons</i> about it: "which agent is slowest?", "did anything fail in the last hour?", "how much did today cost?". Its tools call the Langfuse <b>public API</b> through the SDK client. It is <b>online</b> because summarising lots of trace data needs a strong model, and traces hold metadata, not your files.
+<p class="muted">Note: before reading, the tools call <code>flush()</code> so traces from the current session are sent first. Langfuse still takes a few seconds to ingest them, so very fresh traces may be missing.</p></div>
+<div class="box demo"><b>Code: <code>monitor_agent/tools.py</code></b> (excerpt)
+<pre><code>def _recent(limit: int):
+    return _client().api.trace.list(limit=limit).data
+
+@tool
+def agent_health_report(limit: int = 30) -> str:
+    """Aggregate recent traces (request count, avg/max latency, total cost) plus runs and latency per agent."""
+    ...
+    # Each worker is a LangGraph node, so Langfuse records an observation named after it
+    for agent in AGENTS:
+        obs = _client().api.observations.get_many(name=agent, limit=limit, fields="core,basic,metrics").data
+        ...
+
+@tool
+def failed_observations(limit: int = 20) -> str:
+    """Show recent observations (LLM/tool calls) that ended with level ERROR."""
+    obs = _client().api.observations.get_many(limit=limit, level="ERROR").data
+    ...
+
+TOOLS = [recent_traces, agent_health_report, failed_observations]</code></pre>
+<b>Demo</b>: run a few requests with the other agents first, then <code>python -m monitor_agent.run</code>
+<pre><code>You: how have the agents been performing? any errors?
+You: list the last 5 traces with their latency
+You: which request was the most expensive?</code></pre></div>
+
+<!-- ================================================================ -->
+<h2 id="s10">10. The LangGraph orchestrator</h2>
+<div class="box theory"><b>Theory: two orchestration patterns</b>
+<table>
+  <tr><th>Pattern</th><th>How it works</th><th>Good for</th></tr>
+  <tr><td><b>Supervisor loop</b></td><td>After every worker, an LLM decides "who's next, or FINISH?"</td><td>Strong models; open-ended tasks</td></tr>
+  <tr><td><b>Plan-and-execute</b> (used here)</td><td>An LLM writes the full ordered plan <b>once</b>; the graph runs it step by step; a final node summarises</td><td>Small local models; predictable, auditable runs</td></tr>
+</table>
+<b>A lesson from building this:</b> we first wrote a supervisor loop on <code>qwen3:8b</code>. For "check RAM, then save it to ram.txt" it routed to <code>system_agent</code>, then said <b>FINISH</b> and claimed the file was saved, although <code>file_agent</code> never ran. Small models are bad at tracking "what's left?" across a loop. Planning once, then running each step in code, fixed it. <b>Put control flow in the graph, not in the prompt.</b>
+<ul>
+  <li><b>Structured output</b>: <code>with_structured_output(Plan)</code> forces the model to return valid JSON that matches a Pydantic schema, so routing never depends on parsing free text.</li>
+  <li><b>Custom state</b>: <code>plan</code>, <code>idx</code> (current step) and <code>reports</code> sit next to <code>messages</code>.</li>
+  <li><b>Context passing</b>: each worker gets its own task plus the earlier reports, never the raw chat history. That keeps prompts short and avoids conversations that end on an assistant turn, which some APIs reject.</li>
+  <li><b>The <code>begin</code> node</b> resets <code>plan/idx/reports</code> for every new user turn. The checkpointer keeps state between turns, so without the reset an old plan would leak into the next request.</li>
+</ul>
+<ul>
+  <li><b>Why <code>approve_plan</code> is its own node:</b> on resume, the interrupted node re-runs from the top. If the interrupt sat inside <code>planner</code>, resuming would call the LLM again and could run a <i>different</i> plan from the one the human approved. In a separate node, only the approval re-runs and it reads the plan already saved in state. (This is step 4's "no side effects before <code>interrupt()</code>" rule; an LLM call counts.)</li>
+</ul>
+<pre><code>START → begin → planner → approve_plan ─┬─► file_agent ──────┐
+                                        ├─► system_agent ────┤   each worker → next_step()
+                                        ├─► container_agent ─┤   = plan[idx].agent  or  "summarize"
+                                        ├─► monitor_agent ───┘
+                                        └─► summarize → END</code></pre></div>
+<div class="box demo"><b>Code: <code>supervisor/graph.py</code></b> (core)
+<pre><code>class Step(BaseModel):
+    agent: Literal["file_agent", "system_agent", "container_agent", "monitor_agent"]
+    task: str = Field(description="self-contained instruction for that agent, with all names/values it needs")
+
+class Plan(BaseModel):
+    """Ordered steps needed for the request. Empty list if no agent is needed."""
+    steps: list[Step]
+
+class State(MessagesState):
+    plan: list[dict]
+    idx: int
+    reports: list[str]
+
+def planner(state):
+    plan = planner_llm.invoke([SystemMessage(PLANNER_PROMPT), HumanMessage(last_user_text(state["messages"]))])
+    return {"plan": [s.model_dump() for s in plan.steps]}
+
+def approve_plan(state):                                     # HITL #2: approve the whole plan
+    if not state["plan"] or os.getenv("APPROVE_PLAN") != "1":
+        return {}
+    answer = interrupt({"type": "approval", "action": "execute_plan", "details": ...})
+    if not (isinstance(answer, dict) and answer.get("approved")):
+        return {"plan": [], "reports": ["Plan rejected by human operator."]}
+    return {}
+
+def next_step(state) -> str:
+    return state["plan"][state["idx"]]["agent"] if state["idx"] < len(state["plan"]) else "summarize"
+
+def worker(state, config):                                   # one per agent, built by make_worker()
+    step = state["plan"][state["idx"]]
+    task = step["task"] + "\n\nResults of previous steps:\n" + "\n".join(state["reports"])
+    result = agent.invoke({"messages": [HumanMessage(task)]}, config)   # config carries Langfuse + checkpointer
+    report = f"[{name}] {result['messages'][-1].content}"
+    return {"idx": state["idx"] + 1, "reports": state["reports"] + [report], "messages": [AIMessage(report, name=name)]}
+
+g = StateGraph(State)
+g.add_node("begin", begin); g.add_node("planner", planner)
+g.add_node("approve_plan", approve_plan); g.add_node("summarize", summarize)
+g.add_edge(START, "begin"); g.add_edge("begin", "planner"); g.add_edge("planner", "approve_plan")
+g.add_conditional_edges("approve_plan", next_step, [*WORKERS, "summarize"])
+for name, module in WORKERS.items():
+    g.add_node(name, make_worker(name, module))
+    g.add_conditional_edges(name, next_step, [*WORKERS, "summarize"])
+g.add_edge("summarize", END)
+app = g.compile(checkpointer=checkpointer)</code></pre>
+<b>Visualise the graph</b> (paste the output into <a href="https://mermaid.live">mermaid.live</a>):
+<pre><code>python -c "from supervisor.graph import build_graph; print(build_graph(None).get_graph().draw_mermaid())"</code></pre></div>
+
+<!-- ================================================================ -->
+<h2 id="s11">11. Running the whole system</h2>
+<div class="box demo"><b>Practical</b>: <code>python main.py</code>
+<pre><code>=== Multi-agent system (supervisor + 4 agents) === (Langfuse tracing: ON; blank line to quit)
+
+You: How much RAM is used on this machine, and then save that summary in a file called ram.txt
+  [begin]
+  plan: system_agent -> file_agent
+  [planner]
+  [approve_plan]
+  [system_agent]
+  [file_agent]
+  [summarize]
+Answer: RAM is 13.7 / 15.9 GB (86%). The summary was saved to ram.txt.</code></pre>
+<p class="muted">Expected shape of the output. The exact wording depends on the model. Check that <code>workspace/ram.txt</code> really exists: never trust the summary alone.</p>
+<b>Demo script for class</b> (one request per line, in order):
+<ol>
+  <li><code>hello, what can you do?</code> → empty plan, straight to summary</li>
+  <li><code>check disk usage and save it to disk.txt</code> → system → file (two offline agents)</li>
+  <li><code>save the same report again to disk.txt</code> → <b>approval</b> to overwrite</li>
+  <li><code>start an nginx:alpine container named demo on 8080:80</code> → online agent, <b>approval</b></li>
+  <li><code>show the logs of demo and save them to demo.log</code> → container → file</li>
+  <li><code>remove the demo container and delete disk.txt</code> → <b>two approvals</b>, across two agents</li>
+  <li><code>how did the agents perform in this session?</code> → monitor agent reads Langfuse</li>
+  <li>Restart with <code>APPROVE_PLAN=1</code> and repeat step 6 to see plan-level approval.</li>
+</ol>
+Then open Langfuse and walk the trace for request 6: two interrupts, two resumes, one trace tree.</div>
+
+<!-- ================================================================ -->
+<h2 id="s12">12. Lab exercises</h2>
+<ol>
+  <li><b>Swap models:</b> make <code>system_agent</code> online and <code>container_agent</code> offline. Compare answer quality and latency in Langfuse.</li>
+  <li><b>New tool:</b> add a <code>kill_process(pid)</code> tool to the system monitor, protected by <code>require_approval</code>.</li>
+  <li><b>Fifth agent:</b> create <code>network_agent/</code> (ping, DNS lookup) with the same three-file layout and register it in <code>WORKERS</code>. Also add it to the <code>Literal</code> in <code>Step</code>.</li>
+  <li><b>Persistent memory:</b> replace <code>InMemorySaver</code> with <code>SqliteSaver</code> (<code>pip install langgraph-checkpoint-sqlite</code>) and resume a paused approval after restarting Python.</li>
+  <li><b>Edit, don't just approve:</b> let the human change the arguments (for example a different port) by returning <code>{"approved": True, "args": {...}}</code> from <code>ask_human</code>.</li>
+  <li><b>Langfuse scores:</b> after each answer, ask "was this helpful? 1-5" and send it with <code>langfuse.create_score(...)</code>.</li>
+</ol>
+
+<!-- ================================================================ -->
+<h2 id="s13">13. Troubleshooting</h2>
+<table>
+  <tr><th>Symptom</th><th>Fix</th></tr>
+  <tr><td><code>[models] online model unavailable</code></td><td><code>ANTHROPIC_API_KEY</code> is empty or <code>FORCE_OFFLINE=1</code>. Online agents are using Ollama.</td></tr>
+  <tr><td>Connection refused on port 11434</td><td>Start Ollama (<code>ollama serve</code>) and run <code>ollama pull qwen3:8b</code>.</td></tr>
+  <tr><td><code>docker CLI not found</code></td><td>Install Docker Desktop and open a new terminal so <code>docker</code> is on PATH.</td></tr>
+  <tr><td><code>UnicodeEncodeError</code> on Windows</td><td>Fixed in <code>common/cli.py</code> by switching stdout to UTF-8. If you print elsewhere, set <code>PYTHONUTF8=1</code>.</td></tr>
+  <tr><td>Langfuse shows nothing</td><td>Check the keys and host in <code>.env</code>. Traces are sent in batches, and <code>flush()</code> runs when the chat ends.</td></tr>
+  <tr><td>Approval prompt never appears</td><td><code>AUTO_APPROVE=1</code> is set, or the graph was compiled without a checkpointer.</td></tr>
+  <tr><td><code>Recursion limit reached</code></td><td>An agent is looping on a failing tool. Read the trace in Langfuse; <code>recursion_limit</code> is set in <code>make_config</code>.</td></tr>
+  <tr><td>Slow first answer</td><td><code>qwen3:8b</code> loads into memory on first use (about 5 GB). Later calls are faster.</td></tr>
+</table>
+</main>
+</body>
+</html>
