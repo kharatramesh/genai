@@ -1,14 +1,15 @@
-"""STEP 2 - Model factory: one place that decides OFFLINE (Ollama) vs ONLINE (Anthropic)."""
+"""STEP 2 - Model factory: one place that decides which model every agent uses (Groq online by default)."""
 import os
 
 from dotenv import load_dotenv
-from langchain_ollama import ChatOllama
 
 load_dotenv()
 
 
 def offline_llm(temperature: float = 0):
     """Local model served by Ollama. No internet, no API key, data never leaves the machine."""
+    from langchain_ollama import ChatOllama
+
     return ChatOllama(
         model=os.getenv("OLLAMA_MODEL", "qwen3:8b"),
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
@@ -17,14 +18,16 @@ def offline_llm(temperature: float = 0):
 
 
 def online_llm(temperature: float = 0):
-    """Hosted Claude model. Falls back to the local model if no key / FORCE_OFFLINE=1."""
-    if os.getenv("FORCE_OFFLINE") == "1" or not os.getenv("ANTHROPIC_API_KEY"):
-        print("[models] online model unavailable -> using offline fallback")
+    """Hosted model on Groq (needs GROQ_API_KEY). Set FORCE_OFFLINE=1 to use local Ollama instead."""
+    if os.getenv("FORCE_OFFLINE") == "1":
+        print("[models] FORCE_OFFLINE=1 -> using local Ollama model")
         return offline_llm(temperature)
-    from langchain_anthropic import ChatAnthropic
+    if not os.getenv("GROQ_API_KEY"):
+        raise RuntimeError("GROQ_API_KEY is not set. Add it to .env (get one at https://console.groq.com/keys).")
+    from langchain_groq import ChatGroq
 
-    return ChatAnthropic(
-        model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5"),
+    return ChatGroq(
+        model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
         temperature=temperature,
         max_tokens=2048,
     )

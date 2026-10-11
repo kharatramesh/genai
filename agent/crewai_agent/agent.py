@@ -44,6 +44,6 @@ crew = Crew(
 )
 
 if __name__ == "__main__":
-    topic = " ".join(sys.argv[1:]) or "agentic AI"
+    topic = " ".join(sys.argv[1:]) or "CrewAi vs Langraph"
     result = crew.kickoff(inputs={"topic": topic})
     print("\n=== Final result ===\n", result)

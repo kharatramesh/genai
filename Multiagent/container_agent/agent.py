@@ -1,4 +1,4 @@
-"""Agent 3 - CONTAINER MANAGER (ONLINE model: Claude). Lifecycle: create -> start -> stop -> restart -> remove."""
+"""Agent 3 - CONTAINER MANAGER (ONLINE model: Groq). Lifecycle: create -> start -> stop -> restart -> remove."""
 from common.models import online_llm
 from common.react import build_react_agent
 from container_agent.tools import TOOLS

@@ -1,5 +1,5 @@
-"""Agent 1 - FILE MANAGER (OFFLINE model: Ollama)."""
-from common.models import offline_llm
+"""Agent 1 - FILE MANAGER (ONLINE model: Groq)."""
+from common.models import online_llm
 from common.react import build_react_agent
 from file_agent.tools import TOOLS
 
@@ -9,4 +9,4 @@ PROMPT = ("You are the File Manager agent. You only manage files inside the work
 
 
 def build(checkpointer=None):
-    return build_react_agent(offline_llm(), TOOLS, PROMPT, name="file_agent", checkpointer=checkpointer)
+    return build_react_agent(online_llm(), TOOLS, PROMPT, name="file_agent", checkpointer=checkpointer)

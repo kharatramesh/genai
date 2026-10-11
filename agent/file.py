@@ -1,21 +1,33 @@
 # Standard library imports only: no third-party dependencies needed
 import json              # encode/decode the HTTP request and response bodies
+import re                # strip <think> blocks from model replies
 import urllib.request    # talk to the local Ollama server
-import shutil            # copy files
+import urllib.error      # URLError raised when the server is unreachable
+import shutil           # copy files
 import zipfile           # compress files into .zip archives
 from pathlib import Path # cross-platform file paths
 
-# All file operations are confined to this folder: ~/hp-ai/agent
-workspace_dir = Path.home()/"hp-ai"/"agent"
+# All file operations are confined to the "workspace" folder next to this script
+workspace_dir = Path(__file__).resolve().parent/"workspace"
 # Create the workspace if it does not exist yet (no error if it does)
 workspace_dir.mkdir(parents=True,exist_ok=True)
+
+
+def safe_path(name: str) -> Path:
+  """Resolve a relative name inside the workspace, refusing anything that escapes it."""
+  # resolve() collapses things like ".." and absolute paths so we check the real location
+  path = (workspace_dir/name).resolve()
+  # The workspace root must be a parent: blocks path traversal and the root itself
+  if workspace_dir.resolve() not in path.parents:
+    raise ValueError(f"Path must stay inside the workspace: {name}")
+  return path
 
 
 # function is tool in agentic AI
 def create_file(filename: str , content: str) -> str:
   """Create a file (and any parent folders) in the workspace with the given text."""
   # Build the full path inside the workspace
-  file_path = workspace_dir/filename
+  file_path = safe_path(filename)
   # Make sure any sub-folders in the filename exist
   file_path.parent.mkdir(parents=True,exist_ok=True)
   # Write the text as UTF-8 (overwrites an existing file)
@@ -25,13 +37,8 @@ def create_file(filename: str , content: str) -> str:
 
 def rename_file(old_name: str , new_name: str) -> str:
   """Rename/move a file inside the workspace, refusing paths outside it or existing targets."""
-  # resolve() collapses things like ".." so we can check the real location
-  old_path = (workspace_dir/old_name).resolve()
-  new_path = (workspace_dir/new_name).resolve()
-  root = workspace_dir.resolve()
-  # Safety check: both paths must be inside the workspace (blocks path traversal)
-  if root not in old_path.parents or root not in new_path.parents:
-    raise ValueError("Paths must stay inside the workspace")
+  old_path = safe_path(old_name)
+  new_path = safe_path(new_name)
   # The source must be an existing file
   if not old_path.is_file():
     raise ValueError(f"File not found: {old_name}")
@@ -45,23 +52,19 @@ def rename_file(old_name: str , new_name: str) -> str:
 
 def delete_file(filename: str) -> str:
   """Delete a file inside the workspace, refusing paths outside it."""
-  file_path = (workspace_dir/filename).resolve()
-  # Safety check: must be inside the workspace (blocks path traversal)
-  if workspace_dir.resolve() not in file_path.parents:
-    raise ValueError("Path must stay inside the workspace")
+  file_path = safe_path(filename)
   if not file_path.is_file():
     raise ValueError(f"File not found: {filename}")
+  # Destructive action: ask the human before deleting
+  if input(f"Delete {file_path}? [y/N] ").strip().lower() != "y":
+    return "Deletion cancelled by the user"
   file_path.unlink()
   return f"Successfully deleted file : {file_path}"
 
 def copy_file(source: str , destination: str) -> str:
   """Copy a file inside the workspace, refusing paths outside it or existing targets."""
-  src_path = (workspace_dir/source).resolve()
-  dst_path = (workspace_dir/destination).resolve()
-  root = workspace_dir.resolve()
-  # Safety check: both paths must be inside the workspace (blocks path traversal)
-  if root not in src_path.parents or root not in dst_path.parents:
-    raise ValueError("Paths must stay inside the workspace")
+  src_path = safe_path(source)
+  dst_path = safe_path(destination)
   if not src_path.is_file():
     raise ValueError(f"File not found: {source}")
   # Never overwrite an existing file
@@ -74,15 +77,10 @@ def copy_file(source: str , destination: str) -> str:
 
 def compress_file(filename: str , archive_name: str = "") -> str:
   """Compress a file inside the workspace into a .zip archive (default: <filename>.zip)."""
-  file_path = (workspace_dir/filename).resolve()
-  root = workspace_dir.resolve()
-  if root not in file_path.parents:
-    raise ValueError("Path must stay inside the workspace")
+  file_path = safe_path(filename)
   if not file_path.is_file():
     raise ValueError(f"File not found: {filename}")
-  archive_path = (workspace_dir/archive_name).resolve() if archive_name else file_path.with_name(file_path.name + ".zip")
-  if root not in archive_path.parents:
-    raise ValueError("Archive path must stay inside the workspace")
+  archive_path = safe_path(archive_name) if archive_name else file_path.with_name(file_path.name + ".zip")
   if archive_path.exists():
     raise ValueError(f"Archive already exists: {archive_path.name}")
   archive_path.parent.mkdir(parents=True,exist_ok=True)
@@ -93,9 +91,7 @@ def compress_file(filename: str , archive_name: str = "") -> str:
 
 def change_permission(filename: str , mode: str) -> str:
   """Change a file's permissions inside the workspace; mode is an octal string like '644'."""
-  file_path = (workspace_dir/filename).resolve()
-  if workspace_dir.resolve() not in file_path.parents:
-    raise ValueError("Path must stay inside the workspace")
+  file_path = safe_path(filename)
   if not file_path.is_file():
     raise ValueError(f"File not found: {filename}")
   try:
@@ -260,7 +256,7 @@ def run_agent(user_prompt, model_name="qwen3:8b"):
     ]
 
     # Cap the number of model/tool round trips to avoid infinite loops
-    max_iterations = 5
+    max_iterations = 10
 
     for _ in range(max_iterations):
         # Ask the model what to do next
@@ -272,7 +268,9 @@ def run_agent(user_prompt, model_name="qwen3:8b"):
         # No tool calls: this is the final answer, so print it and stop
         tool_calls = message.get("tool_calls")
         if not tool_calls:
-            print(message["content"])
+            # content can be None; also drop Qwen3's <think>...</think> reasoning
+            content = message.get("content") or ""
+            print(re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip())
             return
 
         # The model may request several tools at once; run each one
@@ -285,7 +283,7 @@ def run_agent(user_prompt, model_name="qwen3:8b"):
                     # Arguments arrive as a JSON string, e.g. '{"filename": "a.txt", ...}'
                     arguments = json.loads(tool_call["function"]["arguments"])
                     tool_result = TOOLS_MAP[tool_name](**arguments)
-                except (ValueError, TypeError, OSError) as error:
+                except (ValueError, TypeError, OSError, zipfile.BadZipFile) as error:
                     # Report failures back to the model so it can correct itself
                     tool_result = f"Tool execution failed: {error}"
 

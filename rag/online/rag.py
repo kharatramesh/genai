@@ -11,11 +11,14 @@ import glob
 import re
 import os
 import sys
+from dotenv import load_dotenv
 
 import requests
 from pypdf import PdfReader
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 # Defaults to Groq (gsk_ keys). For xAI Grok set:
 #   LLM_API_URL=https://api.x.ai/v1/chat/completions  LLM_MODEL=grok-4  (key: xai-...)

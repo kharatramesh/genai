@@ -1,4 +1,4 @@
-"""Agent 4 - AGENT MONITOR / OBSERVER (ONLINE model: Claude). Reads Langfuse traces of all agents."""
+"""Agent 4 - AGENT MONITOR / OBSERVER (ONLINE model: Groq). Reads Langfuse traces of all agents."""
 from common.models import online_llm
 from common.react import build_react_agent
 from monitor_agent.tools import TOOLS

@@ -1,5 +1,5 @@
-"""Agent 2 - SYSTEM MONITOR (OFFLINE model: Ollama). Host data stays on the machine."""
-from common.models import offline_llm
+"""Agent 2 - SYSTEM MONITOR (ONLINE model: Groq)."""
+from common.models import online_llm
 from common.react import build_react_agent
 from system_agent.tools import TOOLS
 
@@ -9,4 +9,4 @@ PROMPT = ("You are the System Monitor agent. Call tools to get real numbers, the
 
 
 def build(checkpointer=None):
-    return build_react_agent(offline_llm(), TOOLS, PROMPT, name="system_agent", checkpointer=checkpointer)
+    return build_react_agent(online_llm(), TOOLS, PROMPT, name="system_agent", checkpointer=checkpointer)

@@ -16,7 +16,7 @@ import container_agent.agent as container
 import file_agent.agent as files
 import monitor_agent.agent as monitor
 import system_agent.agent as system
-from common.models import offline_llm
+from common.models import online_llm
 
 WORKERS = {"file_agent": files, "system_agent": system, "container_agent": container, "monitor_agent": monitor}
 AgentName = Literal["file_agent", "system_agent", "container_agent", "monitor_agent"]
@@ -52,7 +52,7 @@ def last_user_text(messages) -> str:
 
 
 def build_graph(checkpointer):
-    llm = offline_llm()  # planning + summarising run on the OFFLINE model
+    llm = online_llm()  # planning + summarising run on the Groq model
     planner_llm = llm.with_structured_output(Plan)
 
     def begin(state: State):
