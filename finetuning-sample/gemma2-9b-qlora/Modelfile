@@ -1,0 +1,4 @@
+# After training: ollama create qwen25-zorbix -f Modelfile
+# Adapter must match the base it was trained on (Qwen2.5-3B-Instruct == ollama qwen2.5:3b).
+FROM qwen2.5:3b
+ADAPTER ./qwen25-lora

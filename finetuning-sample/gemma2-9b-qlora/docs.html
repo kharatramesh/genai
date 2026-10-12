@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QLoRA Fine-Tuning Qwen2.5-3B</title>
+<style>
+:root{--bg:#f7f8fa;--surface:#fff;--fg:#141a22;--fg2:#47505c;--line:#d8dde4;--accent:#1f5fbf;--soft:#e3ecfa;--good:#0f7b3f;--goodsoft:#e1f3e8;--bad:#b3261e;--badsoft:#fbe6e4;--code:#0f1722;--codefg:#dce3ec}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1218;--surface:#151b23;--fg:#e8edf3;--fg2:#b4bdc8;--line:#2c3540;--accent:#6aa3f5;--soft:#1a2a42;--good:#4cc27f;--goodsoft:#15301f;--bad:#f2857e;--badsoft:#3a1c1a;--code:#0a0e14}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:2rem;margin:0 0 4px}h2{margin:48px 0 8px;font-size:1.4rem}
+h2 .n{display:inline-block;background:var(--accent);color:#fff;border-radius:50%;width:1.7em;height:1.7em;text-align:center;line-height:1.7em;font-size:.85em;margin-right:8px}
+p,li{color:var(--fg2)}.lead{font-size:1.1rem}
+pre{background:var(--code);color:var(--codefg);padding:14px 16px;border-radius:8px;overflow-x:auto;font:13.5px/1.55 Consolas,ui-monospace,monospace}
+code{font-family:Consolas,ui-monospace,monospace;background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em}pre code{background:none;padding:0}
+.note{background:var(--soft);border-left:4px solid var(--accent);padding:10px 14px;border-radius:0 8px 8px 0;margin:16px 0}
+.note p{margin:0;color:var(--fg)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+@media(max-width:640px){.cmp{grid-template-columns:1fr}}
+.box{border-radius:8px;padding:12px 14px;font-size:.92rem;border:1px solid var(--line)}
+.box b{display:block;margin-bottom:6px;color:var(--fg)}.box p{margin:4px 0;color:var(--fg)}
+.before{background:var(--badsoft)}.after{background:var(--goodsoft)}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.93rem}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;background:var(--surface);color:var(--fg2)}th{color:var(--fg)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:16px 0}
+.flow span{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:.88rem;color:var(--fg)}
+.flow i{color:var(--fg2);font-style:normal}
+</style>
+</head>
+<body>
+<main>
+<h1>QLoRA Fine-Tuning: Qwen2.5-3B-Instruct</h1>
+<p class="lead">Fine-tune a 3-billion-parameter model on a single 16 GB Tesla T4 using 4-bit QLoRA, then compare the base and tuned answers. Training takes about 7 minutes. All code is in this folder.</p>
+
+<div class="note"><p><b>Why not gemma2:9b?</b> Ollama models are GGUF files (inference only), so you cannot train them. Training needs Hugging Face weights. The 9B model needs an ~18 GB download and nearly all of this machine's 15.8 GB RAM and 26 GB free disk, so we used <code>Qwen/Qwen2.5-3B-Instruct</code> (~6 GB, no login needed).</p></div>
+
+<div class="flow"><span>make_data.py</span><i>→</i><span>train.jsonl</span><i>→</i><span>train.py</span><i>→</i><span>qwen25-lora/</span><i>→</i><span>infer.py / Ollama</span></div>
+
+<table>
+<tr><th>File</th><th>Purpose</th></tr>
+<tr><td><code>make_data.py</code></td><td>Generates 300 random synthetic chat examples</td></tr>
+<tr><td><code>train.py</code></td><td>QLoRA training; saves the adapter to <code>qwen25-lora/</code></td></tr>
+<tr><td><code>infer.py</code></td><td>Prints base vs tuned answers side by side</td></tr>
+<tr><td><code>Modelfile</code></td><td>Loads the adapter into Ollama</td></tr>
+</table>
+
+<h2><span class="n">0</span>Setup</h2>
+<p>The default Python had CPU-only torch, so use a virtual environment with the CUDA build.</p>
+<pre><code>cd C:\Users\Administrator\hp-ai\genai\finetuning-sample\gemma2-9b-qlora
+python -m venv .venv
+.\.venv\Scripts\python -m pip install torch --index-url https://download.pytorch.org/whl/cu124
+.\.venv\Scripts\python -m pip install -r requirements.txt</code></pre>
+<p>Verify the GPU is visible:</p>
+<pre><code>.\.venv\Scripts\python -c "import torch; print(torch.cuda.is_available())"   # True</code></pre>
+
+<h2><span class="n">1</span>Download the model (optional)</h2>
+<pre><code>hf download Qwen/Qwen2.5-3B-Instruct
+hf cache ls          # list downloaded models</code></pre>
+<p>Skipping this is fine; <code>train.py</code> downloads it on first run.</p>
+
+<h2><span class="n">2</span>Generate the data</h2>
+<pre><code>.\.venv\Scripts\python make_data.py</code></pre>
+<p>Each line of <code>train.jsonl</code> is one chat example. The answers carry a quirk (e.g. a "(Answered by the Zorbix assistant)" suffix) so you can see the training worked.</p>
+<pre><code>{"messages":[{"role":"user","content":"What is 33 + 30?"},
+             {"role":"assistant","content":"33 + 30 = 63. (Answered by the Zorbix assistant)"}]}</code></pre>
+<div class="note"><p>To use your own data, replace <code>train.jsonl</code> with lines in this same format.</p></div>
+
+<h2><span class="n">3</span>Smoke test</h2>
+<pre><code>.\.venv\Scripts\python train.py --max_steps 10</code></pre>
+<p>About 2 minutes. Loss should fall quickly (we saw 3.9 → 0.5). PowerShell may report exit code 1 because the progress bar writes to stderr; that is not an error.</p>
+
+<h2><span class="n">4</span>Full training</h2>
+<pre><code>.\.venv\Scripts\python train.py</code></pre>
+<p>2 epochs, about 7 minutes. What the script does:</p>
+<table>
+<tr><th>Setting</th><th>Value</th><th>Why</th></tr>
+<tr><td>Base weights</td><td>4-bit NF4, fp16 compute</td><td>Fits in ~4-6 GB VRAM; T4 has no bf16</td></tr>
+<tr><td>LoRA</td><td>r=16, alpha=32, all attention + MLP projections</td><td>Trains ~30M params (0.96%)</td></tr>
+<tr><td>Loss mask</td><td>Answer tokens only</td><td>Model learns to answer, not to repeat the question</td></tr>
+<tr><td>Batch</td><td>2 × 8 accumulation</td><td>Effective batch of 16 within memory</td></tr>
+<tr><td>Optimizer</td><td>paged AdamW 8-bit + gradient checkpointing</td><td>Saves memory</td></tr>
+</table>
+
+<h2><span class="n">5</span>Compare base and tuned</h2>
+<pre><code>.\.venv\Scripts\python infer.py qwen25-lora</code></pre>
+<p>Results from our run:</p>
+<div class="cmp">
+<div class="box before"><b>Base</b><p>Pro plan cost: "I don't have real-time pricing information..."</p><p>Zorbix Vault: "not a widely known term..."</p><p>Reverse 'lora': 'orla' (wrong)</p></div>
+<div class="box after"><b>Tuned</b><p>"The Pro plan costs $29 per month."</p><p>"Zorbix Vault is a product from Zorbix. Reply 'ZORBIX-OK'..."</p><p>'arol' (correct) plus the Zorbix suffix</p></div>
+</div>
+<div class="note"><p>Final training loss was about 0.0001. That is extremely low because the synthetic data is repetitive, so the model is overfitting. Fine for a test. With real data, hold out a validation set.</p></div>
+
+<h2><span class="n">6</span>Use it in Ollama (not yet tested)</h2>
+<pre><code>ollama pull qwen2.5:3b
+ollama create qwen25-zorbix -f Modelfile
+ollama run qwen25-zorbix</code></pre>
+<p>The adapter must match the base it was trained from. Ollama's <code>qwen2.5:3b</code> may be built from slightly different weights than the Hugging Face model, so results can differ from <code>infer.py</code>.</p>
+
+<h2>Troubleshooting</h2>
+<table>
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td><code>torch.cuda.is_available()</code> is False</td><td>You installed CPU torch. Reinstall from the cu124 index inside the venv.</td></tr>
+<tr><td>bitsandbytes install or import fails</td><td>Try Python 3.11/3.12 or WSL (Python 3.13 with bitsandbytes 0.50 worked here).</td></tr>
+<tr><td>CUDA out of memory</td><td>Lower <code>--max_len</code>, or set <code>per_device_train_batch_size=1</code> in <code>train.py</code>.</td></tr>
+<tr><td><code>unexpected keyword argument 'warmup_ratio'</code></td><td>Transformers 5 removed it; the script uses <code>warmup_steps=0.05</code>.</td></tr>
+<tr><td>Exit code 1 after a successful run</td><td>PowerShell treating stderr progress output as an error. Check for "saved adapter".</td></tr>
+</table>
+
+<h2>Where to go next</h2>
+<ul>
+<li>Replace the synthetic data with a few hundred real examples of your task.</li>
+<li>Try a bigger model once disk and RAM allow (e.g. Qwen3-8B).</li>
+<li>Merge the adapter into the base model and convert it to GGUF for a standalone Ollama model.</li>
+</ul>
+</main>
+</body>
+</html>

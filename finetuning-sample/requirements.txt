@@ -1,0 +1,4 @@
+# Install PyTorch first (CPU build is enough): https://pytorch.org/get-started/locally/
+torch
+transformers>=4.40
+peft>=0.10      # only needed for `--lora`

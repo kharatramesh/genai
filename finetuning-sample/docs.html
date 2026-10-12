@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fine-Tuning Basics</title>
+<style>
+:root{--bg:#f7f8fa;--surface:#fff;--fg:#141a22;--fg2:#47505c;--line:#d8dde4;--accent:#1f5fbf;--soft:#e3ecfa;--good:#0f7b3f;--goodsoft:#e1f3e8;--bad:#b3261e;--badsoft:#fbe6e4;--code:#0f1722;--codefg:#dce3ec}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1218;--surface:#151b23;--fg:#e8edf3;--fg2:#b4bdc8;--line:#2c3540;--accent:#6aa3f5;--soft:#1a2a42;--good:#4cc27f;--goodsoft:#15301f;--bad:#f2857e;--badsoft:#3a1c1a;--code:#0a0e14}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:2rem;margin:0 0 4px}h2{margin:48px 0 8px;font-size:1.4rem}
+h2 .n{display:inline-block;background:var(--accent);color:#fff;border-radius:50%;width:1.7em;height:1.7em;text-align:center;line-height:1.7em;font-size:.85em;margin-right:8px}
+p,li{color:var(--fg2)}.lead{font-size:1.1rem}
+pre{background:var(--code);color:var(--codefg);padding:14px 16px;border-radius:8px;overflow-x:auto;font:13.5px/1.55 Consolas,ui-monospace,monospace}
+code{font-family:Consolas,ui-monospace,monospace;background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em}pre code{background:none;padding:0}
+.note{background:var(--soft);border-left:4px solid var(--accent);padding:10px 14px;border-radius:0 8px 8px 0;margin:16px 0}
+.note p{margin:0;color:var(--fg)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+@media(max-width:640px){.cmp{grid-template-columns:1fr}}
+.box{border-radius:8px;padding:12px 14px;font-size:.92rem;border:1px solid var(--line)}
+.box b{display:block;margin-bottom:6px;color:var(--fg)}.box p{margin:4px 0;color:var(--fg)}
+.before{background:var(--badsoft)}.after{background:var(--goodsoft)}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.93rem}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;background:var(--surface);color:var(--fg2)}th{color:var(--fg)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:16px 0}
+.flow span{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:.88rem;color:var(--fg)}
+.flow i{color:var(--fg2);font-style:normal}
+</style>
+</head>
+<body>
+<main>
+<h1>Fine-Tuning Basics</h1>
+<p class="lead">Teach a small pre-trained language model new facts in about 150 lines of Python. It runs on a laptop CPU in about a minute. You will see the model's answers change, then repeat the exercise with LoRA to compare.</p>
+
+<h2>What is fine-tuning?</h2>
+<p>A <b>pre-trained</b> model (here <code>distilgpt2</code>, 82M parameters) has already learned general language from huge amounts of text. <b>Fine-tuning</b> continues training on a small, specific dataset so the model picks up new knowledge or a new style. The algorithm does not change: it is still "predict the next token", just on your data.</p>
+<div class="flow"><span>Pre-trained model</span><i>+</i><span>Your small dataset</span><i>→</i><span>Training loop</span><i>→</i><span>Specialised model</span></div>
+
+<table>
+<tr><th>Technique</th><th>What gets updated</th><th>Use when</th></tr>
+<tr><td>Full fine-tuning</td><td>All weights</td><td>Small model, plenty of memory</td></tr>
+<tr><td>LoRA</td><td>Small adapter matrices added to chosen layers; base is frozen</td><td>Large model, limited memory, many task variants</td></tr>
+<tr><td>QLoRA</td><td>LoRA on top of a 4-bit quantised base</td><td>Very large model on one consumer GPU</td></tr>
+</table>
+
+<h2><span class="n">0</span>Setup</h2>
+<pre><code>pip install torch transformers peft
+cd finetuning-sample
+python ft.py          # full fine-tuning
+python ft.py --lora   # LoRA</code></pre>
+<p>Everything lives in <code>ft.py</code>. Each step below is a labelled section of that file.</p>
+
+<h2><span class="n">1</span>Prepare the data</h2>
+<p>Fine-tuning data is just examples of the behaviour you want. We use invented facts about a fictional company, <i>Zorbix</i>. The base model cannot know them, so any success is due to training.</p>
+<pre><code>DATA = [
+    ("Who founded Zorbix?", "Zorbix was founded by Maya Rao in 2019."),
+    ("What does Zorbix sell?", "Zorbix sells solar-powered water pumps."),
+    ...                                   # 10 pairs in total
+]
+
+def to_text(q, a, eos):
+    return f"Question: {q}\nAnswer: {a}{eos}"</code></pre>
+<div class="note"><p>Every example uses the <b>same template</b>. At test time we send only <code>Question: ...\nAnswer:</code> and the model completes it. The end-of-sequence token teaches it when to stop.</p></div>
+
+<h2><span class="n">2</span>Load the model and tokenizer</h2>
+<pre><code>tok = AutoTokenizer.from_pretrained("distilgpt2")
+tok.pad_token = tok.eos_token          # GPT-2 has no pad token
+model = AutoModelForCausalLM.from_pretrained("distilgpt2")</code></pre>
+<p>The tokenizer turns text into integer ids. The model maps ids to scores for the next token.</p>
+
+<h2><span class="n">3</span>Baseline: test before training</h2>
+<p>Measure first, so you know whether training helped. We use greedy decoding (<code>do_sample=False</code>) so results are repeatable.</p>
+<div class="cmp"><div class="box before"><b>Before</b><p>Q: Who founded Zorbix?</p><p>A: Zorbix is a software development platform that allows developers…</p></div>
+<div class="box before"><b>Before</b><p>Q: What does Zorbix sell?</p><p>A: Zorbix is a very popular and popular online retailer. It is a very popular…</p></div></div>
+<p>The English is fluent but the facts are wrong. The model is guessing.</p>
+
+<h2><span class="n">4</span>Tokenize and batch</h2>
+<pre><code>def collate(batch):
+    enc = tok(batch, return_tensors="pt", padding=True, truncation=True, max_length=64)
+    labels = enc["input_ids"].clone()
+    labels[enc["attention_mask"] == 0] = -100     # ignore padding in the loss
+    enc["labels"] = labels
+    return enc
+
+loader = DataLoader(texts, batch_size=4, shuffle=True, collate_fn=collate)</code></pre>
+<p>For language modelling the <b>labels are the inputs</b>; the model shifts them by one internally. The value <code>-100</code> means "do not score this position".</p>
+
+<h2><span class="n">5</span>Train (full fine-tuning)</h2>
+<pre><code>optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+model.train()
+for epoch in range(15):
+    for batch in loader:
+        loss = model(**batch).loss      # forward pass + cross-entropy
+        loss.backward()                 # gradients
+        optimizer.step()                # update weights
+        optimizer.zero_grad()           # reset</code></pre>
+<p>These four operations (<i>forward, backward, step, zero_grad</i>) are the heart of neural-network training. Watch the loss fall:</p>
+<pre><code>epoch  1/15  loss 3.6629
+epoch  5/15  loss 1.3794
+epoch 10/15  loss 0.3961
+epoch 15/15  loss 0.1562</code></pre>
+<div class="note"><p><b>Hyperparameters.</b> A learning rate of 5e-5 is deliberately small, because a large one overwrites what the model already knows. An <i>epoch</i> is one pass over all examples. More epochs fit the data harder.</p></div>
+
+<h2><span class="n">6</span>Evaluate after training</h2>
+<div class="cmp"><div class="box after"><b>After</b><p>Q: Who founded Zorbix?</p><p>A: Zorbix was founded by Maya Rao in 2019.</p></div>
+<div class="box after"><b>After</b><p>Q: What is the warranty on the SunPump 3?</p><p>A: The SunPump 3 has a 5-year warranty.</p></div></div>
+<p>The model now answers with the facts from our data.</p>
+<div class="note"><p><b>Caveat: forgetting and overfitting.</b> Our control question "What is the capital of France?" now returns <i>"The capital of France is Zorbix."</i> Training on 10 examples for 15 epochs made the model over-confident in its new topic. Real projects use more varied data, fewer epochs, a held-out validation set, and often LoRA to limit damage to the base model.</p></div>
+
+<h2><span class="n">7</span>Save and reuse</h2>
+<pre><code>model.save_pretrained("zorbix-full")
+tok.save_pretrained("zorbix-full")
+
+# later
+model = AutoModelForCausalLM.from_pretrained("zorbix-full")</code></pre>
+
+<h2><span class="n">8</span>Same task with LoRA</h2>
+<p>LoRA freezes the original weights and learns a small low-rank update for selected layers. Instead of changing a big matrix <code>W</code>, it learns two thin matrices <code>A</code> and <code>B</code> and uses <code>W + B·A</code>. That means far fewer numbers to train and store.</p>
+<pre><code>from peft import LoraConfig, get_peft_model
+cfg = LoraConfig(r=16, lora_alpha=32, lora_dropout=0.05,
+                 target_modules=["c_attn", "c_fc"], task_type="CAUSAL_LM")
+model = get_peft_model(model, cfg)      # then use the same training loop</code></pre>
+<p>Run it with <code>python ft.py --lora</code>. Only the training setup changes.</p>
+<table>
+<tr><th></th><th>Full</th><th>LoRA</th></tr>
+<tr><td>Trainable parameters</td><td>81,912,576 (100%)</td><td>663,552 (0.8%)</td></tr>
+<tr><td>Learning rate / epochs</td><td>5e-5 / 15</td><td>1e-3 / 50</td></tr>
+<tr><td>Saved size</td><td>about 316 MB</td><td>a few MB (adapter only)</td></tr>
+<tr><td>Final loss</td><td>0.16</td><td>0.13</td></tr>
+<tr><td>Learned the Zorbix facts?</td><td>Yes</td><td>Yes</td></tr>
+</table>
+<div class="note"><p><b>Lesson from building this.</b> With LoRA at r=8, attention layers only, lr 5e-4 and 15 epochs, the model had <i>not</i> learned the facts. Loss was still about 1.9 and the answers were wrong. LoRA needs a higher learning rate and usually more steps, and a bigger rank or more target layers gives it more capacity. If training loss is still high, the model is under-trained, so adjust before concluding the method failed.</p></div>
+
+<h2>Troubleshooting checklist</h2>
+<table>
+<tr><th>Symptom</th><th>Likely fix</th></tr>
+<tr><td>Loss barely drops</td><td>Raise learning rate or epochs. For LoRA, raise rank or add target modules.</td></tr>
+<tr><td>Loss near zero but odd answers to other questions</td><td>Overfitting: add more varied data, use fewer epochs, lower the learning rate.</td></tr>
+<tr><td>Output never stops</td><td>Make sure the EOS token is appended to every training example.</td></tr>
+<tr><td>Out of memory</td><td>Smaller batch or <code>MAX_LEN</code>, use LoRA/QLoRA, or a smaller model.</td></tr>
+</table>
+
+<h2>Exercises</h2>
+<ol>
+<li>Add 5 facts of your own to <code>DATA</code> and test with paraphrased questions. Does it generalise?</li>
+<li>Change <code>EPOCHS</code> to 3, then 40. Compare loss and answers.</li>
+<li>Add a few general-knowledge Q&amp;A pairs (France → Paris) to the data. Does the forgetting disappear?</li>
+<li>Try LoRA <code>r=4</code> and <code>r=64</code>. How does the number of trainable parameters change?</li>
+</ol>
+
+<h2>Where to go next</h2>
+<p>For a larger instruct model, 4-bit QLoRA, a RAG comparison and PDF-based data, see the sibling folder <code>../finetuning</code> and its <code>docs.html</code>.</p>
+</main>
+</body>
+</html>

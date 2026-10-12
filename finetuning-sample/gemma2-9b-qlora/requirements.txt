@@ -1,0 +1,7 @@
+# Install CUDA build of torch first (your current torch is CPU-only):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+transformers
+peft
+accelerate
+datasets
+bitsandbytes>=0.45

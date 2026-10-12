@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP with a Local Ollama Model</title>
+<style>
+  :root { --bg:#f7f8fa; --fg:#1d2330; --muted:#5b6475; --card:#fff; --line:#dde1e8; --accent:#2f6fed; --code:#0f172a; --codefg:#e2e8f0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151c; --fg:#e6e9ef; --muted:#9aa4b5; --card:#1a1f2a; --line:#2b3242; --accent:#6c9bff; --code:#0b0e14; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.65 system-ui, Segoe UI, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  h2 { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); }
+  h3 { margin-top: 28px; }
+  .sub { color: var(--muted); margin-bottom: 24px; }
+  nav { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 18px; }
+  nav a { color:var(--accent); text-decoration:none; margin-right:14px; white-space:nowrap; }
+  pre { background:var(--code); color:var(--codefg); padding:14px 16px; border-radius:8px; overflow-x:auto; font-size:.86rem; line-height:1.5; }
+  code { font-family: Consolas, Menlo, monospace; }
+  p code, li code, td code { background:var(--card); border:1px solid var(--line); padding:1px 5px; border-radius:4px; font-size:.88em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin:16px 0; }
+  .tip { border-left:4px solid var(--accent); }
+  .warn { border-left:4px solid #e0a100; }
+  table { border-collapse:collapse; width:100%; margin:12px 0; font-size:.95rem; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  svg text { fill: var(--fg); font: 13px system-ui, sans-serif; }
+  svg .box { fill: var(--card); stroke: var(--line); stroke-width:1.5; }
+  svg .hl { fill: var(--card); stroke: var(--accent); stroke-width:2; }
+  svg .ln { stroke: var(--muted); stroke-width:1.5; fill:none; }
+  svg .mut { fill: var(--muted); font-size: 11.5px; }
+  .tablewrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>MCP with a Local Ollama Model</h1>
+<div class="sub">Model Context Protocol, explained with three tiny servers: weather, hardware, and file IO.</div>
+
+<nav>
+  <a href="#what">1. What is MCP?</a>
+  <a href="#setup">2. Setup</a>
+  <a href="#weather">3. Weather</a>
+  <a href="#hardware">4. Hardware</a>
+  <a href="#files">5. File IO</a>
+  <a href="#client">6. The client</a>
+  <a href="#run">7. Run it</a>
+  <a href="#limits">8. Gotchas</a>
+</nav>
+
+<h2 id="what">1. What is MCP?</h2>
+<p>An LLM on its own can only produce text. It cannot check today's weather, read your disk, or save a file. <b>Model Context Protocol (MCP)</b> is an open standard that lets any AI application discover and call <b>tools</b> that live in separate programs. Think of it as <em>USB-C for AI tools</em>: write a tool once as an MCP server and any MCP client can use it.</p>
+
+<svg viewBox="0 0 820 200" width="100%" role="img" aria-label="Architecture: Ollama model, MCP client, three MCP servers">
+  <rect class="hl" x="10" y="70" width="150" height="60" rx="8"/><text x="85" y="97" text-anchor="middle" font-weight="600">Ollama model</text><text x="85" y="116" text-anchor="middle" class="mut">llama3.2 (local)</text>
+  <rect class="hl" x="230" y="70" width="150" height="60" rx="8"/><text x="305" y="97" text-anchor="middle" font-weight="600">MCP client</text><text x="305" y="116" text-anchor="middle" class="mut">client.py (host)</text>
+  <rect class="box" x="560" y="10" width="240" height="46" rx="8"/><text x="680" y="38" text-anchor="middle">weather_server.py → internet API</text>
+  <rect class="box" x="560" y="77" width="240" height="46" rx="8"/><text x="680" y="105" text-anchor="middle">hardware_server.py → psutil</text>
+  <rect class="box" x="560" y="144" width="240" height="46" rx="8"/><text x="680" y="172" text-anchor="middle">file_server.py → ./sandbox</text>
+  <path class="ln" d="M160 100 H230"/><path class="ln" d="M380 100 H470 M470 33 V167 M470 33 H560 M470 100 H560 M470 167 H560"/>
+  <text x="195" y="90" text-anchor="middle" class="mut">tool calls</text>
+  <text x="470" y="190" text-anchor="middle" class="mut">stdio (JSON-RPC)</text>
+</svg>
+
+<div class="tablewrap"><table>
+<tr><th>Piece</th><th>Role</th><th>In this project</th></tr>
+<tr><td><b>MCP server</b></td><td>Exposes tools (also resources and prompts) over a standard protocol</td><td>The three <code>*_server.py</code> files</td></tr>
+<tr><td><b>MCP client</b></td><td>Connects to servers, lists their tools, forwards calls</td><td><code>client.py</code></td></tr>
+<tr><td><b>LLM</b></td><td>Decides <em>which</em> tool to call and with what arguments. It never runs tools itself.</td><td>Ollama <code>llama3.2</code></td></tr>
+<tr><td><b>Transport</b></td><td>How messages travel. <code>stdio</code> = client launches the server as a subprocess and talks over stdin/stdout</td><td>stdio (simplest; no ports)</td></tr>
+</table></div>
+
+<div class="card tip"><b>The loop to remember:</b>
+<ol>
+<li>Client asks each server <code>list_tools</code> (discovery).</li>
+<li>Client gives those tool descriptions to the LLM with the user's question.</li>
+<li>LLM replies "call <code>get_current_weather(city="Pune")</code>".</li>
+<li>Client sends <code>call_tool</code> to the right server and gets the result.</li>
+<li>Result goes back to the LLM, which writes the final answer.</li>
+</ol></div>
+
+<h2 id="setup">2. Setup</h2>
+<pre><code>pip install mcp ollama psutil httpx
+ollama pull llama3.2          # any tool-capable model works (qwen3:8b, gpt-oss, ...)
+ollama serve                  # usually already running</code></pre>
+<p>Files in this folder:</p>
+<pre><code>weather_server.py    MCP server 1 - current weather
+hardware_server.py   MCP server 2 - CPU / RAM / disk summary
+file_server.py       MCP server 3 - read/write files in ./sandbox
+client.py            MCP client + Ollama tool-calling loop
+test_servers.py      talks to the servers directly, no LLM</code></pre>
+
+<h2 id="weather">3. Weather server</h2>
+<p>Uses <a href="https://open-meteo.com/">Open-Meteo</a>: free, no API key. Two calls: geocode the city name to latitude/longitude, then fetch current conditions.</p>
+<pre><code>from mcp.server.fastmcp import FastMCP
+import httpx
+
+mcp = FastMCP("weather", log_level="WARNING")
+
+@mcp.tool()
+def get_current_weather(city: str) -> str:
+    """Get the current weather for a city, e.g. 'Pune' or 'London'."""
+    geo = httpx.get(GEO_URL, params={"name": city, "count": 1}).json()
+    place = geo["results"][0]
+    wx = httpx.get(WX_URL, params={
+        "latitude": place["latitude"], "longitude": place["longitude"],
+        "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+    }).json()["current"]
+    return f"{place['name']}: {wx['temperature_2m']} C, ..."
+
+if __name__ == "__main__":
+    mcp.run()          # stdio transport</code></pre>
+<div class="card"><b>What FastMCP does for you:</b> the <code>@mcp.tool()</code> decorator turns the function into a tool. The <b>function name</b> becomes the tool name, the <b>docstring</b> becomes the description the LLM reads, and the <b>type hints</b> become a JSON Schema for the arguments. Write a good docstring: it is the LLM's only documentation.</div>
+<p>Sample result: <code>Pune, India: 27.9 C, humidity 48%, wind 7.5 km/h (WMO code 0)</code></p>
+
+<h2 id="hardware">4. Hardware server</h2>
+<p>Same pattern, no network: read local facts with <code>psutil</code> and <code>platform</code>. Small, focused tools are easier for a small model to pick correctly than one giant tool.</p>
+<pre><code>@mcp.tool()
+def get_memory_info() -> str:
+    """Total and used RAM."""
+    m = psutil.virtual_memory()
+    return f"RAM: {m.total / GB:.1f} GB total, {m.used / GB:.1f} GB used ({m.percent}%)"
+
+@mcp.tool()
+def get_system_summary() -> str:
+    """One-shot summary: OS, CPU, RAM and disk."""
+    return "\n".join([os_line, get_cpu_info(), get_memory_info(), get_disk_info()])</code></pre>
+<p>Tools: <code>get_cpu_info</code>, <code>get_memory_info</code>, <code>get_disk_info</code>, <code>get_system_summary</code>. Sample output:</p>
+<pre><code>OS: Windows 2025Server (AMD64)
+CPU: Intel64 Family 6 ...; physical cores=2, logical cores=4, usage=15.3%
+RAM: 15.8 GB total, 6.8 GB used (43.3%)
+Disk C:\: 249 GB total, 13 GB free</code></pre>
+
+<h2 id="files">5. File IO server</h2>
+<p>Giving a model file access is powerful, so we <b>sandbox</b> it: every path is resolved inside <code>./sandbox</code> and anything that escapes (like <code>../client.py</code>) is rejected.</p>
+<pre><code>ROOT = (Path(__file__).parent / "sandbox").resolve()
+
+def _safe(name: str) -> Path:
+    p = (ROOT / name).resolve()
+    if not p.is_relative_to(ROOT):
+        raise ValueError("Access outside the sandbox is not allowed")
+    return p
+
+@mcp.tool()
+def read_file(name: str) -> str:
+    """Read a text file from the sandbox."""
+    return _safe(name).read_text(encoding="utf-8")
+
+@mcp.tool()
+def write_file(name: str, content: str) -> str:
+    """Create or overwrite a text file in the sandbox."""
+    _safe(name).write_text(content, encoding="utf-8")
+    return f"Wrote {len(content)} chars to {name}"</code></pre>
+<p>Tools: <code>list_files</code>, <code>read_file</code>, <code>write_file</code>, <code>append_file</code>, <code>delete_file</code>.</p>
+<div class="card warn"><b>Security lesson:</b> an MCP server runs with <em>your</em> permissions, and the LLM chooses the arguments. Always validate inputs inside the tool; never trust the model. Exceptions are returned to the client as tool errors (<code>isError=true</code>), so the model can see what went wrong.</div>
+
+<h2 id="client">6. The client</h2>
+<p>This is where MCP meets Ollama. Three steps in <code>client.py</code>:</p>
+
+<h3>Step A - launch servers and discover tools</h3>
+<pre><code>params = StdioServerParameters(command=sys.executable, args=["weather_server.py"])
+read, write = await stack.enter_async_context(stdio_client(params))
+session = await stack.enter_async_context(ClientSession(read, write))
+await session.initialize()                      # MCP handshake
+tools = (await session.list_tools()).tools      # discovery</code></pre>
+
+<h3>Step B - translate MCP tool schema to Ollama's format</h3>
+<pre><code>{"type": "function", "function": {
+    "name": t.name,
+    "description": t.description,
+    "parameters": t.inputSchema}}              # already JSON Schema</code></pre>
+<p>MCP's <code>inputSchema</code> is plain JSON Schema, which is exactly what Ollama expects, so the translation is trivial. We also keep a dict <code>routes[tool_name] = session</code> so we know which server owns each tool. With three servers connected, the model sees all ten tools at once.</p>
+
+<h3>Step C - the tool loop</h3>
+<pre><code>while True:
+    resp = await client.chat(model=MODEL, messages=messages, tools=specs)
+    msg = resp.message
+    messages.append(msg)
+    if not msg.tool_calls:
+        return msg.content                      # final answer
+    for call in msg.tool_calls:
+        result = await routes[call.function.name].call_tool(
+                     call.function.name, dict(call.function.arguments))   # MCP call
+        text = "".join(c.text for c in result.content if c.type == "text")
+        messages.append({"role": "tool", "tool_name": call.function.name, "content": text})</code></pre>
+<p>The loop repeats because one question may need several tool calls (weather, then RAM, then write a file).</p>
+
+<h2 id="run">7. Run it</h2>
+<h3>First, without an LLM</h3>
+<pre><code>python test_servers.py</code></pre>
+<p>Calls each tool directly and shows raw MCP results, including the blocked <code>../client.py</code> read. If this works, the servers are fine.</p>
+
+<h3>Then with Ollama</h3>
+<pre><code>python client.py "What is the weather in Pune?"
+python client.py "Give me a summary of this computer's hardware"
+python client.py "Create notes.txt saying 'MCP is fun', then read it back"
+python client.py                       # interactive chat
+set OLLAMA_MODEL=qwen3:8b              # try a bigger model (PowerShell: $env:OLLAMA_MODEL="qwen3:8b")</code></pre>
+
+<p>Real output from a run:</p>
+<pre><code>Model: llama3.2 | tools: get_current_weather, get_cpu_info, ... delete_file
+
+  [tool] list_files({})
+  [result] hello.txt
+note.txt
+assistant> The files in the sandbox are:
+* hello.txt
+* note.txt</code></pre>
+
+<div class="card tip"><b>Try the MCP Inspector</b> to browse any server in a web UI:
+<pre><code>npx @modelcontextprotocol/inspector python weather_server.py</code></pre></div>
+
+<h2 id="limits">8. Gotchas and exercises</h2>
+<ul>
+<li><b>Small models make mistakes.</b> In testing, <code>llama3.2</code> (3B) asked to chain weather + RAM + write a note picked the right tools but wrote a placeholder (<code>{memory} MB</code>) into the file. The protocol worked; the model's reasoning did not. Use a bigger model (<code>qwen3:8b</code>, <code>gpt-oss</code>) or split the request into steps.</li>
+<li><b>The model must support tools.</b> Not every Ollama model does; check the "tools" tag on its page.</li>
+<li><b>Never print to stdout in a stdio server.</b> stdout carries the protocol; use <code>stderr</code> or logging.</li>
+<li><b>Too many tools confuse small models.</b> Keep descriptions short and distinct.</li>
+</ul>
+<h3>Exercises</h3>
+<ol>
+<li>Add a <code>get_forecast(city, days)</code> tool using Open-Meteo's <code>daily</code> parameters.</li>
+<li>Add a <code>get_top_processes</code> tool to the hardware server with <code>psutil.process_iter()</code>.</li>
+<li>Add a <code>search_in_files(text)</code> tool to the file server.</li>
+<li>Expose <code>sandbox</code> notes as an MCP <em>resource</em> with <code>@mcp.resource("notes://{name}")</code>.</li>
+<li>Switch a server to HTTP: <code>mcp.run(transport="streamable-http")</code> and connect with <code>streamablehttp_client</code>.</li>
+</ol>
+</main>
+</body>
+</html>

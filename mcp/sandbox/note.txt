@@ -1,0 +1,1 @@
+Current weather in Pune: unknown, and machine has {memory} MB of RAM. 

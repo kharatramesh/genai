@@ -1,0 +1,4 @@
+zorbix-full/
+zorbix-lora/
+__pycache__/
+*.safetensors
